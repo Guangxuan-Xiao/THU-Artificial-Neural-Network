@@ -1,0 +1,11 @@
+fc(784-64)_sigmoid_fc(64-10)_CE
+{'learning_rate': 0.05, 'weight_decay': 0.0, 'momentum': 0.0, 'batch_size': 100, 'max_epoch': 100, 'disp_freq': 200, 'test_epoch': 1}
+Time cost:  133.62438488006592 s
+
+Final Train
+Loss: 0.009140
+Acc: 0.974850
+
+Final Test
+Loss: 0.010878
+Acc: 0.968100
