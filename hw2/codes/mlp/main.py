@@ -120,74 +120,70 @@ def inference(model, X):  # Test Process
 
 
 if __name__ == '__main__':
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if not os.path.exists(args.train_dir):
-        os.mkdir(args.train_dir)
-    if args.is_train:
-        X_train, X_test, y_train, y_test = load_cifar_2d(args.data_dir)
-        X_val, y_val = X_train[40000:], y_train[40000:]
-        X_train, y_train = X_train[:40000], y_train[:40000]
-        mlp_model = Model(drop_rate=drop_rate)
-        mlp_model.to(device)
-        print(mlp_model)
-        optimizer = optim.Adam(mlp_model.parameters(), lr=args.learning_rate)
+	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	if not os.path.exists(args.train_dir):
+		os.mkdir(args.train_dir)
+	if args.is_train:
+		X_train, X_test, y_train, y_test = load_cifar_2d(args.data_dir)
+		X_val, y_val = X_train[40000:], y_train[40000:]
+		X_train, y_train = X_train[:40000], y_train[:40000]
+		mlp_model = Model(drop_rate=args.drop_rate)
+		mlp_model.to(device)
+		print(mlp_model)
+		optimizer = optim.Adam(mlp_model.parameters(), lr=args.learning_rate)
 
-        # model_path = os.path.join(args.train_dir, 'checkpoint_%d.pth.tar' % args.inference_version)
-        # if os.path.exists(model_path):
-        # 	mlp_model = torch.load(model_path)
+		# model_path = os.path.join(args.train_dir, 'checkpoint_%d.pth.tar' % args.inference_version)
+		# if os.path.exists(model_path):
+		# 	mlp_model = torch.load(model_path)
 
-        pre_losses = [1e18] * 3
-        best_val_acc = 0.0
-        for epoch in range(1, args.num_epochs + 1):
-            start_time = time.time()
-            train_acc, train_loss = train_epoch(mlp_model, X_train, y_train,
-                                                optimizer)
-            X_train, y_train = shuffle(X_train, y_train, 1)
+		pre_losses = [1e18] * 3
+		best_val_acc = 0.0
+		for epoch in range(1, args.num_epochs+1):
+			start_time = time.time()
+			train_acc, train_loss = train_epoch(mlp_model, X_train, y_train, optimizer)
+			X_train, y_train = shuffle(X_train, y_train, 1)
 
-            val_acc, val_loss = valid_epoch(mlp_model, X_val, y_val)
+			val_acc, val_loss = valid_epoch(mlp_model, X_val, y_val)
 
-            if val_acc >= best_val_acc:
-                best_val_acc = val_acc
-                best_epoch = epoch
-                test_acc, test_loss = valid_epoch(mlp_model, X_test, y_test)
-                # with open(os.path.join(args.train_dir, 'checkpoint_{}.pth.tar'.format(epoch)), 'wb') as fout:
-                # 	torch.save(mlp_model, fout)
-                # with open(os.path.join(args.train_dir, 'checkpoint_0.pth.tar'), 'wb') as fout:
-                # 	torch.save(mlp_model, fout)
+			if val_acc >= best_val_acc:
+				best_val_acc = val_acc
+				best_epoch = epoch
+				test_acc, test_loss = valid_epoch(mlp_model, X_test, y_test)
+				# with open(os.path.join(args.train_dir, 'checkpoint_{}.pth.tar'.format(epoch)), 'wb') as fout:
+				# 	torch.save(mlp_model, fout)
+				# with open(os.path.join(args.train_dir, 'checkpoint_0.pth.tar'), 'wb') as fout:
+				# 	torch.save(mlp_model, fout)
 
-            epoch_time = time.time() - start_time
-            print("Epoch " + str(epoch) + " of " + str(args.num_epochs) +
-                  " took " + str(epoch_time) + "s")
-            print("  learning rate:                 " +
-                  str(optimizer.param_groups[0]['lr']))
-            print("  training loss:                 " + str(train_loss))
-            print("  training accuracy:             " + str(train_acc))
-            print("  validation loss:               " + str(val_loss))
-            print("  validation accuracy:           " + str(val_acc))
-            print("  best epoch:                    " + str(best_epoch))
-            print("  best validation accuracy:      " + str(best_val_acc))
-            print("  test loss:                     " + str(test_loss))
-            print("  test accuracy:                 " + str(test_acc))
+			epoch_time = time.time() - start_time
+			print("Epoch " + str(epoch) + " of " + str(args.num_epochs) + " took " + str(epoch_time) + "s")
+			print("  learning rate:                 " + str(optimizer.param_groups[0]['lr']))
+			print("  training loss:                 " + str(train_loss))
+			print("  training accuracy:             " + str(train_acc))
+			print("  validation loss:               " + str(val_loss))
+			print("  validation accuracy:           " + str(val_acc))
+			print("  best epoch:                    " + str(best_epoch))
+			print("  best validation accuracy:      " + str(best_val_acc))
+			print("  test loss:                     " + str(test_loss))
+			print("  test accuracy:                 " + str(test_acc))
 
-            if train_loss > max(pre_losses):
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = param_group['lr'] * 0.9995
-            pre_losses = pre_losses[1:] + [train_loss]
+			if train_loss > max(pre_losses):
+				for param_group in optimizer.param_groups:
+					param_group['lr'] = param_group['lr'] * 0.9995
+			pre_losses = pre_losses[1:] + [train_loss]
 
-    else:
-        mlp_model = Model()
-        mlp_model.to(device)
-        model_path = os.path.join(
-            args.train_dir, 'checkpoint_%d.pth.tar' % args.inference_version)
-        if os.path.exists(model_path):
-            mlp_model = torch.load(model_path)
+	else:
+		mlp_model = Model()
+		mlp_model.to(device)
+		model_path = os.path.join(args.train_dir, 'checkpoint_%d.pth.tar' % args.inference_version)
+		if os.path.exists(model_path):
+			mlp_model = torch.load(model_path)
 
-        X_train, X_test, y_train, y_test = load_cifar_2d(args.data_dir)
+		X_train, X_test, y_train, y_test = load_cifar_2d(args.data_dir)
 
-        count = 0
-        for i in range(len(X_test)):
-            test_image = X_test[i].reshape((1, 3 * 32 * 32))
-            result = inference(mlp_model, test_image)[0]
-            if result == y_test[i]:
-                count += 1
-        print("test accuracy: {}".format(float(count) / len(X_test)))
+		count = 0
+		for i in range(len(X_test)):
+			test_image = X_test[i].reshape((1, 3 * 32 * 32))
+			result = inference(mlp_model, test_image)[0]
+			if result == y_test[i]:
+				count += 1
+		print("test accuracy: {}".format(float(count) / len(X_test)))
