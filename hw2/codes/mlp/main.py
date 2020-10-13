@@ -105,7 +105,7 @@ if __name__ == '__main__':
 		X_train, X_test, y_train, y_test = load_cifar_2d(args.data_dir)
 		X_val, y_val = X_train[40000:], y_train[40000:]
 		X_train, y_train = X_train[:40000], y_train[:40000]
-		mlp_model = Model(drop_rate=drop_rate)
+		mlp_model = Model(drop_rate=args.drop_rate)
 		mlp_model.to(device)
 		print(mlp_model)
 		optimizer = optim.Adam(mlp_model.parameters(), lr=args.learning_rate)
