@@ -11,7 +11,6 @@ class BatchNorm2d(nn.Module):
     # Reference: https://github.com/ptrblck/pytorch_misc/blob/master/batch_norm_manual.py
     def __init__(self, num_features, eps=1e-10, momentum=0.1):
         super(BatchNorm2d, self).__init__()
-        print(num_features)
         self.num_features = num_features
         self.momentum = momentum
         self.eps = eps
@@ -70,30 +69,46 @@ class Dropout(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, drop_rate=0.5, h=32, w=32):
+    def __init__(self, batch_norm=True, drop_rate=0.5, h=32, w=32):
         super(Model, self).__init__()
         # TODO START
         # Define your layers here
         kernel = [5, 3]
         channel = [100, 60]
-        self.conv_layers = nn.Sequential(
-            nn.Conv2d(
-                in_channels=3, out_channels=channel[0], kernel_size=kernel[0]),
-            # nn.BatchNorm2d(channel[0]),
-            BatchNorm2d(channel[0]),
-            nn.ReLU(),
-            # nn.Dropout2d(drop_rate),
-            Dropout(drop_rate),
-            nn.MaxPool2d(2),
-            nn.Conv2d(in_channels=channel[0], out_channels=channel[1],
-                      kernel_size=kernel[1]),
-            # nn.BatchNorm2d(channel[1]),
-            BatchNorm2d(channel[1]),
-            nn.ReLU(),
-            # nn.Dropout2d(drop_rate),
-            Dropout(drop_rate),
-            nn.MaxPool2d(2)
-        )
+        if batch_norm:
+            self.conv_layers = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=3, out_channels=channel[0], kernel_size=kernel[0]),
+                # nn.BatchNorm2d(channel[0]),
+                BatchNorm2d(channel[0]),
+                nn.ReLU(),
+                # nn.Dropout2d(drop_rate),
+                Dropout(drop_rate),
+                nn.MaxPool2d(2),
+                nn.Conv2d(in_channels=channel[0], out_channels=channel[1],
+                          kernel_size=kernel[1]),
+                # nn.BatchNorm2d(channel[1]),
+                BatchNorm2d(channel[1]),
+                nn.ReLU(),
+                # nn.Dropout2d(drop_rate),
+                Dropout(drop_rate),
+                nn.MaxPool2d(2)
+            )
+        else:
+            self.conv_layers = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=3, out_channels=channel[0], kernel_size=kernel[0]),
+                nn.ReLU(),
+                # nn.Dropout2d(drop_rate),
+                Dropout(drop_rate),
+                nn.MaxPool2d(2),
+                nn.Conv2d(in_channels=channel[0], out_channels=channel[1],
+                          kernel_size=kernel[1]),
+                nn.ReLU(),
+                # nn.Dropout2d(drop_rate),
+                Dropout(drop_rate),
+                nn.MaxPool2d(2)
+            )
         self.fc = nn.Linear(
             channel[1]*(((h-kernel[0]+1)//2-kernel[1]+1)//2) *
             (((w-kernel[0]+1)//2-kernel[1]+1)//2), 10)

@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
-import sys
-import argparse
-import os
+import matplotlib.pyplot as plt
 import time
-
+import os
+import argparse
+import sys
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from model import Model
 from load_data import load_cifar_4d
 
@@ -30,7 +29,20 @@ parser.add_argument('--train_dir', type=str, default='./train',
                     help='Training directory for saving model. Default: ./train')
 parser.add_argument('--inference_version', type=int, default=0,
                     help='The version for inference. Set 0 to use latest checkpoint. Default: 0')
+parser.add_argument("--model_name", type=str,
+                    default="cnn", help="Model name.")
+parser.add_argument("--batch_norm", action="store_true")
 args = parser.parse_args()
+
+
+def plot(epochs, train, test, label, file="plot.png"):
+    plt.figure()
+    plt.plot(epochs, train, label="Training")
+    plt.plot(epochs, test, label="Validating")
+    plt.xlabel("Epochs")
+    plt.ylabel(label)
+    plt.legend()
+    plt.savefig("plots/"+file)
 
 
 def shuffle(X, y, shuffle_parts):
@@ -107,7 +119,7 @@ if __name__ == '__main__':
         X_train, X_test, y_train, y_test = load_cifar_4d(args.data_dir)
         X_val, y_val = X_train[40000:], y_train[40000:]
         X_train, y_train = X_train[:40000], y_train[:40000]
-        cnn_model = Model(drop_rate=args.drop_rate)
+        cnn_model = Model(drop_rate=args.drop_rate, batch_norm=args.batch_norm)
         cnn_model.to(device)
         print(cnn_model)
         optimizer = optim.Adam(cnn_model.parameters(), lr=args.learning_rate)
@@ -118,6 +130,9 @@ if __name__ == '__main__':
 
         pre_losses = [1e18] * 3
         best_val_acc = 0.0
+        epochs = []
+        train_data = {"loss": [], "acc": []}
+        val_data = {"loss": [], "acc": []}
         for epoch in range(1, args.num_epochs+1):
             start_time = time.time()
             train_acc, train_loss = train_epoch(
@@ -153,6 +168,15 @@ if __name__ == '__main__':
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = param_group['lr'] * 0.9995
             pre_losses = pre_losses[1:] + [train_loss]
+            epochs.append(epoch)
+            train_data["acc"].append(train_acc)
+            train_data["loss"].append(train_loss)
+            val_data["acc"].append(val_acc)
+            val_data["loss"].append(val_loss)
+        plot(epochs, train_data["acc"], val_data["acc"],
+             "Accuracy", args.model_name+"_acc.png")
+        plot(epochs, train_data["loss"], val_data["loss"],
+             "Loss", args.model_name+"_loss.png")
 
     else:
         print("begin testing")
