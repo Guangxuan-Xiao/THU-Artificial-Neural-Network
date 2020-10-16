@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=4 python -u main.py --learning_rate 1e-3 --drop_rate 0.1 
