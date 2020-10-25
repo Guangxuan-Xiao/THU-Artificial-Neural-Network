@@ -2,3 +2,4 @@
 *.zip
 cifar-10_data/
 __pycache__/
+train/

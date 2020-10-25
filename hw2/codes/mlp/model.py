@@ -34,12 +34,14 @@ class BatchNorm1d(nn.Module):
             mean = self.running_mean
             var = self.running_var
         else:
-            mean = torch.mean(input, dim=1, keepdim=False)
-            var = torch.var(input, dim=1, keepdim=False)
-            self.running_mean = self.momentum * mean + (
-                1 - self.momentum) * self.running_mean
-            self.running_var = self.momentum * var * batch_size / (
-                batch_size - 1) + (1 - self.momentum) * self.running_var
+            mean = torch.mean(input, dim=0, keepdim=False)
+            var = torch.var(input, dim=0, keepdim=False)
+            # Important! Without no_grad will cause memory leaks.
+            with torch.no_grad():
+                self.running_mean = self.momentum * mean + (
+                    1 - self.momentum) * self.running_mean
+                self.running_var = self.momentum * var * batch_size / (
+                    batch_size - 1) + (1 - self.momentum) * self.running_var
         input = (input - mean) / (var + self.eps).sqrt()
         input = self.weight * input + self.bias
         return input
@@ -65,12 +67,14 @@ class Dropout(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, drop_rate=0.5, num_features=32 * 32 * 3, hidden=256):
+    def __init__(self, batch_norm=True, drop_rate=0.5, num_features=32 * 32 * 3, hidden=256):
         super(Model, self).__init__()
         # TODO START
         # Define your layers here
+        self.batch_norm = batch_norm
         self.fc1 = nn.Linear(num_features, hidden)
-        self.bn1 = BatchNorm1d(num_features=hidden)
+        if self.batch_norm:
+            self.bn1 = BatchNorm1d(num_features=hidden)
         # self.bn1 = nn.BatchNorm1d(num_features=hidden)
         self.act = nn.ReLU()
         self.dropout = Dropout(drop_rate)
@@ -83,7 +87,8 @@ class Model(nn.Module):
         # TODO START
         # the 10-class prediction output is named as "logits"
         x = self.fc1(x)
-        x = self.bn1(x)
+        if self.batch_norm:
+            x = self.bn1(x)
         x = self.act(x)
         x = self.dropout(x)
         logits = self.fc2(x)
