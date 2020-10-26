@@ -2,38 +2,63 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
-
 from rnn_cell import RNNCell, GRUCell, LSTMCell
 
 
 class RNN(nn.Module):
     def __init__(
-        self,
-        num_embed_units,  # pretrained wordvec size
-        num_units,  # RNN units size
-        num_layers,  # number of RNN layers
-        num_vocabs,  # vocabulary size
-        wordvec,  # pretrained wordvec matrix
-        dataloader):  # dataloader
+            self,
+            num_embed_units,  # pretrained wordvec size
+            num_units,  # RNN units size
+            num_layers,  # number of RNN layers
+            num_vocabs,  # vocabulary size
+            wordvec,  # pretrained wordvec matrix
+            dataloader,  # dataloader
+            cell_type="GRU"  # cell type
+    ):
 
         super().__init__()
 
         # load pretrained wordvec
-        self.wordvec = wordvec
-        print(wordvec)
+        self.num_vocabs = num_vocabs
+        self.num_units = num_units
+        self.wordvec = nn.Embedding.from_pretrained(wordvec)
         # the dataloader
         self.dataloader = dataloader
 
         # TODO START
         # fill the parameter for multi-layer RNN
         assert (num_layers >= 1)
-        self.cells = nn.Sequential(RNNCell(),
-                                   *[RNNCell() for _ in range(num_layers - 1)])
+        if cell_type == "RNN":
+            self.cells = nn.Sequential(RNNCell(num_embed_units, num_units),
+                                       *[RNNCell(num_embed_units, num_units) for _ in range(num_layers - 1)])
+        elif cell_type == "GRU":
+            self.cells = nn.Sequential(GRUCell(num_embed_units, num_units),
+                                       *[GRUCell(num_embed_units, num_units) for _ in range(num_layers - 1)])
+        elif cell_type == "LSTM":
+            self.cells = nn.Sequential(LSTMCell(num_embed_units, num_units),
+                                       *[LSTMCell(num_embed_units, num_units) for _ in range(num_layers - 1)])
+        else:
+            raise NotImplementedError("Unknown Cell Type")
+        self.cell_type = cell_type
         # TODO END
 
         # intialize other layers
         self.linear = nn.Linear(num_units, num_vocabs)
-        self.loss_fn = nn.BCEWithLogitsLoss()
+
+    def maskNLLLoss(self, logits: torch.tensor, gts: torch.tensor, device):
+        # Reference: https://pytorch.org/tutorials/beginner/chatbot_tutorial.html
+        # Reference: https://blog.csdn.net/uhauha2929/article/details/83019995
+        mask = (gts != 0).view(-1, 1)
+        logits = F.softmax(logits, dim=1)
+        crossEntropy = -torch.log(torch.gather(logits, 1, gts.unsqueeze(1)))
+        loss = crossEntropy.masked_select(mask).sum()
+        loss = loss.to(device)
+        return loss
+
+    def get_gts(self, label: torch.tensor, device):
+        batch_size = label.size(0)
+        return torch.zeros((batch_size, self.num_vocabs), device=device).scatter_(1, label.unsqueeze(1), 1)
 
     def forward(self, batched_data, device):
         # Padded Sentences
@@ -59,8 +84,8 @@ class RNN(nn.Module):
 
         # TODO START
         # implement embedding layer
-        embedding = self.wordvec(
-            sent)  # shape: (batch_size, length, num_embed_units)
+        # shape: (batch_size, length, num_embed_units)
+        embedding = self.wordvec(sent)
         # TODO END
 
         now_state = []
@@ -72,17 +97,35 @@ class RNN(nn.Module):
         for i in range(seqlen - 1):
             hidden = embedding[:, i]
             for j, cell in enumerate(self.cells):
-                hidden, now_state[j] = cell(
-                    hidden, now_state[j])  # shape: (batch_size, num_units)
+                # shape: (batch_size, num_units)
+                hidden, now_state[j] = cell(hidden, now_state[j])
             logits = self.linear(hidden)  # shape: (batch_size, num_vocabs)
             logits_per_step.append(logits)
-
         # TODO START
         # calculate loss
-        loss = self.loss_fn(logits_per_step, sent)
+        for step, logits in enumerate(logits_per_step):
+            # Teacher Forcing
+            loss += self.maskNLLLoss(logits, sent[:, step + 1], device)
+        loss /= length.sum().item()
         # TODO END
-
         return loss, torch.stack(logits_per_step, dim=1)
+
+    def top_p_filtering(self, logits, max_probability=1.0, filter_value=-1e20):
+        # Reference: https://gist.github.com/thomwolf/1a5a29f6962089e871b94cbd09daf317
+        sorted_logits, sorted_indices = torch.sort(
+            logits, descending=True, dim=1)
+        cumulative_probs = torch.cumsum(
+            F.softmax(sorted_logits, dim=1), dim=1)
+        sorted_indices_to_remove = cumulative_probs > max_probability
+        # Shift the indices to the right to keep also the first token above the threshold
+        sorted_indices_to_remove[...,
+                                 1:] = sorted_indices_to_remove[..., :-1].clone()
+        sorted_indices_to_remove[..., 0] = 0
+        batch_size = logits.size(0)
+        for i in range(batch_size):
+            indices_to_remove = sorted_indices[i, sorted_indices_to_remove[i]]
+            logits[i, indices_to_remove] = filter_value
+        return logits
 
     def inference(self, batch_size, device, decode_strategy, temperature,
                   max_probability):
@@ -98,10 +141,10 @@ class RNN(nn.Module):
 
         generated_tokens = []
         for _ in range(50):  # max sentecne length
-
             # TODO START
             # translate now_token to embedding
-            embedding = self.wordvec()  # shape: (batch_size, num_embed_units)
+            # shape: (batch_size, num_embed_units)
+            embedding = self.wordvec(now_token)
             # TODO END
 
             hidden = embedding
@@ -117,8 +160,16 @@ class RNN(nn.Module):
             elif decode_strategy == "top-p":
                 # TODO START
                 # implement top-p samplings
-                now_token = 0  # shape: (batch_size)
+                prob = (self.top_p_filtering(logits, max_probability=max_probability)).softmax(
+                    dim=-1)  # shape: (batch_size, num_vocabs)
+                now_token = torch.multinomial(
+                    prob, 1)[:, 0]  # shape: (batch_size)
                 # TODO END
+            elif decode_strategy == "top-1":
+                # implement top-1 samplings
+                prob = (logits / temperature).softmax(
+                    dim=-1)  # shape: (batch_size, num_vocabs)
+                now_token = torch.argmax(prob, 1)  # shape: (batch_size)
             else:
                 raise NotImplementedError("unknown decode strategy")
 
@@ -128,5 +179,4 @@ class RNN(nn.Module):
             if flag.sum().tolist(
             ) == 0:  # all sequences has generated the <eos> token
                 break
-
         return torch.stack(generated_tokens, dim=1).detach().cpu().numpy()

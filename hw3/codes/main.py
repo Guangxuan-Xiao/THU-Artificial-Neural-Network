@@ -1,3 +1,5 @@
+from model import RNN
+import cotk
 import numpy as np
 import time
 import random
@@ -9,9 +11,6 @@ import os
 
 random.seed(1229)
 
-import cotk
-
-from model import RNN
 
 parser = argparse.ArgumentParser()
 
@@ -19,6 +18,9 @@ parser.add_argument('--name',
                     type=str,
                     default="run",
                     help='Experiment name. Default: run')
+parser.add_argument('--cell',
+                    type=str,
+                    default="GRU")
 parser.add_argument('--num_epochs',
                     type=int,
                     default=20,
@@ -64,10 +66,9 @@ parser.add_argument(
 parser.add_argument(
     '--decode_strategy',
     type=str,
-    choices=["random", "top-p"],
+    choices=["random", "top-p", "top-1"],
     default="random",
-    help=
-    'The strategy for decoding. Can be "random" or "top-p". Default: random')
+    help='The strategy for decoding. Can be "random" or "top-p". Default: random')
 parser.add_argument('--temperature',
                     type=float,
                     default=1,
@@ -171,7 +172,7 @@ if __name__ == '__main__':
             torch.tensor(wordvec.load_matrix(args.embed_units,
                                              dataloader.frequent_vocab_list),
                          dtype=torch.float,
-                         device=device), dataloader)
+                         device=device), dataloader, cell_type=args.cell)
         model.to(device)
 
         optimizer = optim.Adam(model.parameters(),
@@ -196,7 +197,7 @@ if __name__ == '__main__':
 
                 if (batch + 1) % 100 == 0:
                     print("Epoch %d Batch %d, train loss %f" %
-                          (epoch, batch, np.mean(losses[-100:])))
+                          (epoch, batch + 1, np.mean(losses[-100:])))
 
             train_loss = np.mean(losses)
 
