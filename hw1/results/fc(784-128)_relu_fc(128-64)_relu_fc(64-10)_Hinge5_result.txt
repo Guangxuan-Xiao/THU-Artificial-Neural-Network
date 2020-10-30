@@ -1,0 +1,11 @@
+fc(784-128)_relu_fc(128-64)_relu_fc(64-10)_Hinge5
+{'learning_rate': 0.05, 'weight_decay': 0.0, 'momentum': 0.0, 'batch_size': 100, 'max_epoch': 100, 'disp_freq': 200, 'test_epoch': 1}
+Time cost:  141.44370436668396 s
+
+Final Train
+Loss: 0.031574
+Acc: 0.997917
+
+Final Test
+Loss: 0.679308
+Acc: 0.975900

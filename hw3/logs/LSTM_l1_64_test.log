@@ -1,0 +1,9 @@
+Namespace(batch_size=100, cell='LSTM', data_dir='./data', decode_strategy='top-p', embed_units=300, layers=1, learning_rate=0.001, max_probability=0.8, name='LSTM_l1_64', num_epochs=30, temperature=0.8, test='LSTM_l1_64', train_dir='./train', units=64, wordvec_dir='./wordvec')
+INFO: local path: ./data
+INFO: processor type: Default
+INFO: local path: ./wordvec
+INFO: processor type: Default
+Loading model from ./train/checkpoint_LSTM_l1_64.pth.tar
+test set restart, 50 batches and 0 left
+        test_set, perplexity 20.50, forward BLEU 0.421, backward BLEU 0.322, harmonic BLEU 0.365
+        test_set, write inference results to output.txt

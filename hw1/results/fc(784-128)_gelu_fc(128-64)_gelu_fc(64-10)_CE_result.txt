@@ -1,0 +1,11 @@
+fc(784-128)_gelu_fc(128-64)_gelu_fc(64-10)_CE
+{'learning_rate': 0.05, 'weight_decay': 0.0, 'momentum': 0.0, 'batch_size': 100, 'max_epoch': 100, 'disp_freq': 200, 'test_epoch': 1}
+Time cost:  1545.0976450443268 s
+
+Final Train
+Loss: 0.000339
+Acc: 0.999567
+
+Final Test
+Loss: 0.009332
+Acc: 0.978400

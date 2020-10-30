@@ -1,0 +1,260 @@
+########################
+# Additional Files
+########################
+# mlp1.py
+# mlp2.py
+# __pycache__
+
+########################
+# Filled Code
+########################
+# ../codes/loss.py:1
+        self.delta = input - target
+        self.loss = np.mean(np.linalg.norm(self.delta, axis=1)**2) / 2
+        return self.loss
+
+# ../codes/loss.py:2
+        return self.delta
+
+# ../codes/loss.py:3
+        input = self.softmax(input)
+        self.loss = -np.mean(np.multiply(np.log(input), target))
+        self.delta = input - target
+        return self.loss
+
+# ../codes/loss.py:4
+        return self.delta
+
+# ../codes/loss.py:5
+        self.loss = np.mean(
+            np.sum(np.maximum(
+                0, self.threshold + input - input[target == 1].reshape(-1, 1))
+                   * (target == 0),
+                   axis=1))
+        return self.loss
+
+# ../codes/loss.py:6
+        delta = np.zeros_like(input)
+        delta[(target == 0)
+              & (self.threshold - input[target == 1].reshape(-1, 1) +
+                 input > 0)] = 1
+        delta[(target == 1)] = -np.sum(delta, axis=1)
+        return delta
+
+# ../codes/layers.py:1
+        self.input = input
+        return self.relu(input)
+
+# ../codes/layers.py:2
+        return grad_output * self.relu_grad(self.input)
+
+# ../codes/layers.py:3
+        self.input = input
+        return self.sigmoid(input)
+
+# ../codes/layers.py:4
+        return grad_output * self.sigmoid_grad(self.input)
+
+# ../codes/layers.py:5
+        self.input = input
+        return self.gelu(input)
+
+# ../codes/layers.py:6
+        return grad_output * self.gelu_grad(self.input)
+
+# ../codes/layers.py:7
+        # print(self.W)
+        self.input = input
+        return self.input @ self.W + self.b
+
+# ../codes/layers.py:8
+        batch_size = grad_output.shape[0]
+        self.grad_b = grad_output
+        self.grad_W = (self.input.T @ grad_output) / batch_size
+        return grad_output @ self.W.T
+
+
+########################
+# References
+########################
+
+########################
+# Other Modifications
+########################
+# _codes/solve_net.py -> ../codes/solve_net.py
+# 12 -         yield x[indx[start_idx: end_idx]], y[indx[start_idx: end_idx]]
+# 12 ?                                -                            -
+# 12 +         yield x[indx[start_idx:end_idx]], y[indx[start_idx:end_idx]]
+# 20 -
+# 20 +     loss_temp_list = []
+# 21 +     acc_temp_list = []
+# 38 -         loss_list.append(loss_value)
+# 39 +         loss_temp_list.append(loss_value)
+# 39 ?             +++++
+# 39 -         acc_list.append(acc_value)
+# 40 +         acc_temp_list.append(acc_value)
+# 40 ?            +++++
+# 42 -             msg = '  Training iter %d, batch loss %.4f, batch acc %.4f' % (iter_counter, np.mean(loss_list), np.mean(acc_list))
+# 43 +             loss_mean = np.mean(loss_temp_list)
+# 44 +             acc_mean = np.mean(acc_temp_list)
+# 45 +             msg = '  Training iter %d, batch loss %.4f, batch acc %.4f' % (
+# 46 +                 iter_counter, loss_mean, acc_mean)
+# 43 -             loss_list = []
+# 47 +             loss_temp_list = []
+# 47 ?                  +++++
+# 44 -             acc_list = []
+# 48 +             acc_temp_list = []
+# 48 ?                 +++++
+# 50 +             loss_list.append(loss_mean)
+# 51 +             acc_list.append(acc_mean)
+# 52 +     return np.mean(loss_list), np.mean(acc_list)
+# 51 -
+# 52 -     for input, label in data_iterator(inputs, labels, batch_size, shuffle=False):
+# 58 +     for input, label in data_iterator(inputs,
+# 59 +                                       labels,
+# 60 +                                       batch_size,
+# 61 +                                       shuffle=False):
+# 59 -
+# 68 +     loss_mean = np.mean(loss_list)
+# 69 +     acc_mean = np.mean(acc_list)
+# 60 -     msg = '    Testing, total mean loss %.5f, total acc %.5f' % (np.mean(loss_list), np.mean(acc_list))
+# 60 ?                                                                  --------     ----------    ^^^^^^^^^^^
+# 70 +     msg = '    Testing, total mean loss %.5f, total acc %.5f' % (loss_mean,
+# 70 ?                                                                           ^
+# 71 +                                                                  acc_mean)
+# 73 +     return loss_mean, acc_mean
+# _codes/network.py -> ../codes/network.py
+# 6 +
+# 7 +     def __str__(self):
+# 8 +         return "_".join([str(layer) for layer in self.layer_list])
+# _codes/loss.py -> ../codes/loss.py
+# 25 +         self.loss = np.zeros(1, dtype="f")
+# 39 +
+# 40 +     def softmax(self, u):
+# 41 +         u -= np.max(u)
+# 42 +         return np.exp(u) / (np.sum(np.exp(u), 1).reshape(-1, 1))
+# 48 +         self.threshold = threshold
+# 54 -
+# _codes/run_mlp.py -> ../codes/run_mlp.py
+# 1 + import matplotlib
+# 2 + matplotlib.use('Agg')
+# 3 + import matplotlib.pyplot as plt
+# 10 + import argparse
+# 11 + train_data, test_data, train_label, test_label = load_mnist_2d('../data')
+# 12 + import numpy as np
+# 13 + import time
+# 9 - train_data, test_data, train_label, test_label = load_mnist_2d('data')
+# 16 + def plot(epochs, train, test, label, file="plot.png"):
+# 17 +     plt.figure()
+# 18 +     plt.plot(epochs, train, label="Training")
+# 19 +     plt.plot(epochs, test, label="Testing")
+# 20 +     plt.xlabel("Epochs")
+# 21 +     plt.ylabel(label)
+# 22 +     plt.legend()
+# 23 +     plt.savefig(file)
+# 24 +
+# 28 + from mlp2 import model
+# 13 - model = Network()
+# 14 - model.add(Linear('fc1', 784, 10, 0.01))
+# 30 + # loss = SoftmaxCrossEntropyLoss(name="CE")
+# 16 - loss = EuclideanLoss(name='loss')
+# 16 ?                            ^^^^
+# 31 + # loss = EuclideanLoss(name='MSE')
+# 31 ? ++                           ^^^
+# 32 + loss = HingeLoss(name="Hinge5", threshold=5)
+# 34 +
+# 35 + model_name = str(model) + "_" + loss.name
+# 36 + print(model_name)
+# 25 -     'learning_rate': 0.0,
+# 44 +     'learning_rate': 0.05,
+# 44 ?                         +
+# 30 -     'disp_freq': 50,
+# 30 ?                  ^
+# 49 +     'disp_freq': 200,
+# 49 ?                  ^^
+# 31 -     'test_epoch': 5
+# 31 ?                   ^
+# 50 +     'test_epoch': 1
+# 50 ?                   ^
+# 34 -
+# 53 + train_loss_list = []
+# 54 + train_acc_list = []
+# 55 + test_loss_list = []
+# 56 + test_acc_list = []
+# 57 + epochs = []
+# 58 + time_start = time.time()
+# 37 -     train_net(model, loss, config, train_data, train_label, config['batch_size'], config['disp_freq'])
+# 61 +     train_loss, train_acc = train_net(model, loss, config, train_data,
+# 62 +                                       train_label, config['batch_size'],
+# 63 +                                       config['disp_freq'])
+# 39 -     if epoch % config['test_epoch'] == 0:
+# 40 -         LOG_INFO('Testing @ %d epoch...' % (epoch))
+# 40 ? ----
+# 65 +     LOG_INFO('Testing @ %d epoch...' % (epoch))
+# 41 -         test_net(model, loss, test_data, test_label, config['batch_size'])
+# 66 +     test_loss, test_acc = test_net(model, loss, test_data, test_label,
+# 67 +                                    config['batch_size'])
+# 68 +     epochs.append(epoch + 1)
+# 69 +     train_loss_list.append(train_loss)
+# 70 +     train_acc_list.append(train_acc)
+# 71 +     test_loss_list.append(test_loss)
+# 72 +     test_acc_list.append(test_acc)
+# 73 + time_end = time.time()
+# 74 + plot(epochs,
+# 75 +      train_loss_list,
+# 76 +      test_loss_list,
+# 77 +      "Loss",
+# 78 +      file="../plots/%s_loss.png" % model_name)
+# 79 + plot(epochs,
+# 80 +      train_acc_list,
+# 81 +      test_acc_list,
+# 82 +      "Accuracy",
+# 83 +      file="../plots/%s_acc.png" % model_name)
+# 84 +
+# 85 + with open("../results/%s_result.txt" % model_name, "w+") as f:
+# 86 +     train_loss, train_acc = train_net(model, loss, config, train_data,
+# 87 +                                       train_label, config['batch_size'],
+# 88 +                                       config['disp_freq'])
+# 89 +     test_loss, test_acc = test_net(model, loss, test_data, test_label,
+# 90 +                                    config['batch_size'])
+# 91 +     print(model_name, file=f)
+# 92 +     print(config, file=f)
+# 93 +     print("Time cost: ", time_end - time_start, 's', file=f)
+# 94 +     print("\nFinal Train\nLoss: %f\nAcc: %f" % (train_loss, train_acc), file=f)
+# 95 +     print("\nFinal Test\nLoss: %f\nAcc: %f" % (test_loss, test_acc), file=f)
+# _codes/layers.py -> ../codes/layers.py
+# 2 + import math
+# 26 +     def __str__(self):
+# 27 +         return self.name
+# 28 +
+# 29 +
+# 44 +
+# 45 +     def relu(self, u):
+# 46 +         return np.maximum(u, 0)
+# 47 +
+# 48 +     def relu_grad(self, u):
+# 49 +         return 1 * (u > 0)
+# 50 +
+# 66 +
+# 67 +     def sigmoid(self, u):
+# 68 +         return 1 / (1 + np.exp(-u))
+# 69 +
+# 70 +     def sigmoid_grad(self, u):
+# 71 +         return self.sigmoid(u) * (1 - self.sigmoid(u))
+# 72 +
+# 77 +         self.delta = 1e-5
+# 89 +
+# 90 +     def gelu(self, u):
+# 91 +         return 0.5 * u * (
+# 92 +             1 + np.tanh(np.sqrt(2 / np.pi) * (u + 0.044715 * np.power(u, 3))))
+# 93 +
+# 94 +     def gelu_grad(self, u):
+# 95 +         return (self.gelu(u + self.delta) -
+# 96 +                 self.gelu(u - self.delta)) / (2 * self.delta)
+# 97 +
+# 103 -
+# 106 -
+# 136 +
+# 137 +     def __str__(self):
+# 138 +         return "fc(%d-%d)" % (self.in_num, self.out_num)
+
