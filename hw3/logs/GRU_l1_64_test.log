@@ -5,5 +5,5 @@ INFO: local path: ./wordvec
 INFO: processor type: Default
 Loading model from ./train/checkpoint_GRU_l1_64.pth.tar
 test set restart, 50 batches and 0 left
-        test_set, perplexity 18.97, forward BLEU 0.439, backward BLEU 0.342, harmonic BLEU 0.384
+        test_set, perplexity 18.87, forward BLEU 0.443, backward BLEU 0.345, harmonic BLEU 0.388
         test_set, write inference results to output.txt

@@ -260,7 +260,7 @@ if __name__ == '__main__':
 
         _, ppl = fast_evaluate(model, dataloader, "test", device)
         result = evaluate(model, dataloader, "test", device)
-        with open('output.txt', 'w') as fout:
+        with open('%s_output.txt' % args.name, 'w') as fout:
             for sent in result["gen"]:
                 fout.write(" ".join(sent) + "\n")
 
