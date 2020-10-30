@@ -8,6 +8,8 @@ import torch
 from torch import optim
 import torch.nn.functional as F
 import os
+import matplotlib.pyplot as plt
+from tensorboardX import SummaryWriter
 
 random.seed(1229)
 
@@ -78,6 +80,18 @@ parser.add_argument('--max_probability',
                     default=1,
                     help='The p for top-p decoding. Default: 1')
 args = parser.parse_args()
+if not args.test:
+    writer = SummaryWriter("../runs/%s" % args.name)
+
+
+def plot(epochs, train, test, label, file="plot.png"):
+    plt.figure()
+    plt.plot(epochs, train, label="Training")
+    plt.plot(epochs, test, label="Validating")
+    plt.xlabel("Epochs")
+    plt.ylabel(label)
+    plt.legend()
+    plt.savefig("../plots/"+file)
 
 
 def fast_evaluate(model, dataloader, datakey, device):
@@ -180,7 +194,9 @@ if __name__ == '__main__':
                                weight_decay=0)
         best_val_ppl = float("inf")
         best_epoch = -1
-
+        train_losses = []
+        val_losses = []
+        epochs = []
         for epoch in range(1, args.num_epochs + 1):
             start_time = time.time()
 
@@ -211,7 +227,12 @@ if __name__ == '__main__':
                                      'checkpoint_%s.pth.tar' % args.name),
                         'wb') as fout:
                     torch.save(model, fout)
+            train_losses.append(train_loss)
+            val_losses.append(val_loss)
 
+            writer.add_scalar("Train Loss", train_loss, epoch)
+            writer.add_scalar("Val Loss", val_loss, epoch)
+            epochs.append(epoch+1)
             samples = show_example(model, dataloader, 5, device)
 
             epoch_time = time.time() - start_time
@@ -225,6 +246,8 @@ if __name__ == '__main__':
 
             for example_id, sent in enumerate(samples):
                 print("Example %d: " % example_id + " ".join(sent))
+        plot(epochs, train=train_losses, test=val_losses,
+             label="Loss", file="%s_loss.png" % args.name)
 
     else:
         model_path = os.path.join(args.train_dir,
@@ -246,3 +269,5 @@ if __name__ == '__main__':
             %
             (ppl, result["fw-bleu"], result["bw-bleu"], result["fw-bw-bleu"]))
         print("        test_set, write inference results to output.txt")
+if not args.test:
+    writer.close()
