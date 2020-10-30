@@ -1,0 +1,418 @@
+########################
+# Missing Files
+########################
+# load_data.py
+
+########################
+# Additional Files
+########################
+# logs
+# README.md
+# run.sh
+# run_no_batchnorm.sh
+# plots
+
+########################
+# Filled Code
+########################
+# ../codes/cnn/model.py:1
+    # Reference: https://github.com/ptrblck/pytorch_misc/blob/master/batch_norm_manual.py
+    def __init__(self, num_features, eps=1e-10, momentum=0.1):
+        self.momentum = momentum
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(num_features,
+                                              requires_grad=True))
+        self.bias = nn.Parameter(torch.zeros(num_features, requires_grad=True))
+        self.register_buffer('running_mean', torch.zeros(num_features))
+        self.register_buffer('running_var', torch.ones(num_features))
+
+        batch_size, num_feature_map, height, width = input.shape
+        mean, var = None, None
+        if not self.training and batch_size == 1:
+            mean = self.running_mean
+            var = self.running_var
+        else:
+            mean = input.mean([0, 2, 3])
+            var = input.var([0, 2, 3], unbiased=False)
+            n = batch_size * height * width
+            # Important! Without no_grad will cause memory leaks.
+            with torch.no_grad():
+                self.running_mean = self.momentum * mean + (
+                    1 - self.momentum) * self.running_mean
+                self.running_var = self.momentum * var * n / (
+                    n - 1) + (1 - self.momentum) * self.running_var
+        input = (input - mean[None, :, None, None]) / \
+            (var[None, :, None, None] + self.eps).sqrt()
+        input = input * self.weight[None, :, None,
+                                    None] + self.bias[None, :, None, None]
+
+# ../codes/cnn/model.py:2
+        batch_size, num_feature_map, height, width = input.shape
+        if self.training:
+            return torch.bernoulli(torch.ones((batch_size, 1, height, width)) *
+                                   (1 - self.p)).to(
+                input.get_device()) * input / (1 - self.p)
+        else:
+            return input
+
+# ../codes/cnn/model.py:3
+        kernel = [5, 3]
+        channel = [100, 60]
+        if batch_norm:
+            self.conv_layers = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=3, out_channels=channel[0], kernel_size=kernel[0]),
+                # nn.BatchNorm2d(channel[0]),
+                BatchNorm2d(channel[0]),
+                nn.ReLU(),
+                # nn.Dropout2d(drop_rate),
+                Dropout(drop_rate),
+                nn.MaxPool2d(2),
+                nn.Conv2d(in_channels=channel[0], out_channels=channel[1],
+                          kernel_size=kernel[1]),
+                # nn.BatchNorm2d(channel[1]),
+                BatchNorm2d(channel[1]),
+                nn.ReLU(),
+                # nn.Dropout2d(drop_rate),
+                Dropout(drop_rate),
+                nn.MaxPool2d(2)
+            )
+        else:
+            self.conv_layers = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=3, out_channels=channel[0], kernel_size=kernel[0]),
+                nn.ReLU(),
+                # nn.Dropout2d(drop_rate),
+                Dropout(drop_rate),
+                nn.MaxPool2d(2),
+                nn.Conv2d(in_channels=channel[0], out_channels=channel[1],
+                          kernel_size=kernel[1]),
+                nn.ReLU(),
+                # nn.Dropout2d(drop_rate),
+                Dropout(drop_rate),
+                nn.MaxPool2d(2)
+            )
+        self.fc = nn.Linear(
+            channel[1]*(((h-kernel[0]+1)//2-kernel[1]+1)//2) *
+            (((w-kernel[0]+1)//2-kernel[1]+1)//2), 10)
+
+# ../codes/cnn/model.py:4
+        x = self.conv_layers(x)
+        x = x.view(x.size(0), -1)
+        logits = self.fc(x)
+
+# ../codes/mlp/model.py:1
+    # Reference: https://discuss.pytorch.org/t/implementing-batchnorm-in-pytorch-problem-with-updating-self-running-mean-and-self-running-var/49314
+    # Reference: https://github.com/ptrblck/pytorch_misc/blob/master/batch_norm_manual.py
+    # Reference: https://wiseodd.github.io/techblog/2016/07/04/batchnorm/
+    def __init__(self, num_features, eps=1e-10, momentum=0.1):
+        self.eps = eps
+        # use exponential moving average
+        self.momentum = momentum
+        self.weight = nn.Parameter(torch.ones(num_features,
+                                              requires_grad=True))
+        self.bias = nn.Parameter(torch.zeros(num_features, requires_grad=True))
+        self.register_buffer('running_mean', torch.zeros(num_features))
+        self.register_buffer('running_var', torch.ones(num_features))
+        mean, var = None, None
+        batch_size = input.size(0)
+        if not self.training and batch_size == 1:
+            mean = self.running_mean
+            var = self.running_var
+        else:
+            mean = torch.mean(input, dim=0, keepdim=False)
+            var = torch.var(input, dim=0, keepdim=False)
+            # Important! Without no_grad will cause memory leaks.
+            with torch.no_grad():
+                self.running_mean = self.momentum * mean + (
+                    1 - self.momentum) * self.running_mean
+                self.running_var = self.momentum * var * batch_size / (
+                    batch_size - 1) + (1 - self.momentum) * self.running_var
+        input = (input - mean) / (var + self.eps).sqrt()
+        input = self.weight * input + self.bias
+
+
+# ../codes/mlp/model.py:2
+        if self.training:
+            return torch.bernoulli(torch.ones_like(input) * (1 - self.p)).to(
+                input.get_device()) * input / (1 - self.p)
+        else:
+            return input
+
+
+# ../codes/mlp/model.py:3
+        self.batch_norm = batch_norm
+        self.fc1 = nn.Linear(num_features, hidden)
+        if self.batch_norm:
+            self.bn1 = BatchNorm1d(num_features=hidden)
+        # self.bn1 = nn.BatchNorm1d(num_features=hidden)
+        self.act = nn.ReLU()
+        self.dropout = Dropout(drop_rate)
+        # self.dropout = nn.Dropout(drop_rate)
+        self.fc2 = nn.Linear(hidden, 10)
+
+# ../codes/mlp/model.py:4
+        x = self.fc1(x)
+        if self.batch_norm:
+            x = self.bn1(x)
+        x = self.act(x)
+        x = self.dropout(x)
+        logits = self.fc2(x)
+
+
+########################
+# References
+########################
+# https://discuss.pytorch.org/t/implementing-batchnorm-in-pytorch-problem-with-updating-self-running-mean-and-self-running-var/49314
+# https://wiseodd.github.io/techblog/2016/07/04/batchnorm/
+# https://github.com/ptrblck/pytorch_misc/blob/master/batch_norm_manual.py
+
+########################
+# Other Modifications
+########################
+# _codes/cnn/model.py -> ../codes/cnn/model.py
+# 7 +
+# 8 +
+# 51 +
+# 70 +
+# 40 -     def __init__(self, drop_rate=0.5):
+# 72 +     def __init__(self, batch_norm=True, drop_rate=0.5, h=32, w=32):
+# 47 -     def forward(self, x, y=None):
+# 47 ?                                  -
+# 118 +     def forward(self, x, y=None):
+# 52 -
+# 58 -         acc = torch.mean(correct_pred.float())  # Calculate the accuracy in this mini-batch
+# 130 +         # Calculate the accuracy in this mini-batch
+# 131 +         acc = torch.mean(correct_pred.float())
+# _codes/cnn/main.py -> ../codes/cnn/main.py
+# 2 + import matplotlib.pyplot as plt
+# 3 + import time
+# 4 + import os
+# 5 + import argparse
+# 3 - import argparse
+# 4 - import os
+# 5 - import time
+# 6 -
+# 11 -
+# 18 -     help='Batch size for mini-batch training and evaluating. Default: 100')
+# 17 +                     help='Batch size for mini-batch training and evaluating. Default: 100')
+# 17 ? ++++++++++++++++
+# 20 -     help='Number of training epoch. Default: 20')
+# 19 +                     help='Number of training epoch. Default: 20')
+# 19 ? ++++++++++++++++
+# 22 -     help='Learning rate during optimization. Default: 1e-3')
+# 21 +                     help='Learning rate during optimization. Default: 1e-3')
+# 21 ? ++++++++++++++++
+# 24 -     help='Drop rate of the Dropout Layer. Default: 0.5')
+# 23 +                     help='Drop rate of the Dropout Layer. Default: 0.5')
+# 23 ? ++++++++++++++++
+# 26 -     help='True to train and False to inference. Default: True')
+# 25 +                     help='True to train and False to inference. Default: True')
+# 25 ? ++++++++++++++++
+# 28 -     help='Data directory. Default: ../cifar-10_data')
+# 27 +                     help='Data directory. Default: ../cifar-10_data')
+# 27 ? ++++++++++++++++
+# 30 -     help='Training directory for saving model. Default: ./train')
+# 29 +                     help='Training directory for saving model. Default: ./train')
+# 29 ? ++++++++++++++++
+# 32 -     help='The version for inference. Set 0 to use latest checkpoint. Default: 0')
+# 31 +                     help='The version for inference. Set 0 to use latest checkpoint. Default: 0')
+# 31 ? ++++++++++++++++
+# 32 + parser.add_argument("--model_name", type=str,
+# 33 +                     default="cnn", help="Model name.")
+# 34 + parser.add_argument("--batch_norm", action="store_true")
+# 36 +
+# 37 +
+# 38 + def plot(epochs, train, test, label, file="plot.png"):
+# 39 +     plt.figure()
+# 40 +     plt.plot(epochs, train, label="Training")
+# 41 +     plt.plot(epochs, test, label="Validating")
+# 42 +     plt.xlabel("Epochs")
+# 43 +     plt.ylabel(label)
+# 44 +     plt.legend()
+# 45 +     plt.savefig("plots/"+file)
+# 55 - def train_epoch(model, X, y, optimizer): # Training Process
+# 67 + def train_epoch(model, X, y, optimizer):  # Training Process
+# 67 ?                                          +
+# 61 -         X_batch, y_batch = torch.from_numpy(X[st:ed]).to(device), torch.from_numpy(y[st:ed]).to(device)
+# 73 +         X_batch, y_batch = torch.from_numpy(X[st:ed]).to(
+# 74 +             device), torch.from_numpy(y[st:ed]).to(device)
+# 76 - def valid_epoch(model, X, y): # Valid Process
+# 89 + def valid_epoch(model, X, y):  # Valid Process
+# 89 ?                               +
+# 81 -         X_batch, y_batch = torch.from_numpy(X[st:ed]).to(device), torch.from_numpy(y[st:ed]).to(device)
+# 94 +         X_batch, y_batch = torch.from_numpy(X[st:ed]).to(
+# 95 +             device), torch.from_numpy(y[st:ed]).to(device)
+# 94 - def inference(model, X): # Test Process
+# 108 + def inference(model, X):  # Test Process
+# 108 ?                          +
+# 108 -         cnn_model = Model(drop_rate=args.drop_rate)
+# 122 +         cnn_model = Model(drop_rate=args.drop_rate, batch_norm=args.batch_norm)
+# 122 ?                                                   ++++++++++++++++++++++++++++
+# 133 +         epochs = []
+# 134 +         train_data = {"loss": [], "acc": []}
+# 135 +         val_data = {"loss": [], "acc": []}
+# 138 +             train_acc, train_loss = train_epoch(
+# 121 -             train_acc, train_loss = train_epoch(cnn_model, X_train, y_train, optimizer)
+# 121 ?             ---------- ---------- - ^^^^^^^^^^^^
+# 139 +                 cnn_model, X_train, y_train, optimizer)
+# 139 ?                ^
+# 154 +             print("Epoch " + str(epoch) + " of " +
+# 136 -             print("Epoch " + str(epoch) + " of " + str(args.num_epochs) + " took " + str(epoch_time) + "s")
+# 136 ?             ------------ - - ---------- - --------
+# 155 +                   str(args.num_epochs) + " took " + str(epoch_time) + "s")
+# 137 -             print("  learning rate:                 " + str(optimizer.param_groups[0]['lr']))
+# 156 +             print("  learning rate:                 " +
+# 157 +                   str(optimizer.param_groups[0]['lr']))
+# 171 +             epochs.append(epoch)
+# 172 +             train_data["acc"].append(train_acc)
+# 173 +             train_data["loss"].append(train_loss)
+# 174 +             val_data["acc"].append(val_acc)
+# 175 +             val_data["loss"].append(val_loss)
+# 176 +         plot(epochs, train_data["acc"], val_data["acc"],
+# 177 +              "Accuracy", args.model_name+"_acc.png")
+# 178 +         plot(epochs, train_data["loss"], val_data["loss"],
+# 179 +              "Loss", args.model_name+"_loss.png")
+# 185 +         model_path = os.path.join(
+# 156 -         model_path = os.path.join(args.train_dir, 'checkpoint_%d.pth.tar' % args.inference_version)
+# 156 ?         ---------- - ^^^^^^^^^^^^^
+# 186 +             args.train_dir, 'checkpoint_%d.pth.tar' % args.inference_version)
+# 186 ?           ^^
+# _codes/mlp/model.py -> ../codes/mlp/model.py
+# 7 +
+# 8 +
+# 50 +
+# 68 +
+# 40 -     def __init__(self, drop_rate=0.5):
+# 70 +     def __init__(self, batch_norm=True, drop_rate=0.5, num_features=32 * 32 * 3, hidden=256):
+# 102 +         acc = torch.mean(
+# 58 -         acc = torch.mean(correct_pred.float())  # Calculate the accuracy in this mini-batch
+# 58 ?         --- - ^^^^^^^^^^^
+# 103 +             correct_pred.float())  # Calculate the accuracy in this mini-batch
+# 103 ?           ^^
+# _codes/mlp/main.py -> ../codes/mlp/main.py
+# 14 -
+# 14 + import matplotlib.pyplot as plt
+# 17 - parser.add_argument('--batch_size', type=int, default=100,
+# 17 + parser.add_argument(
+# 18 +     '--batch_size',
+# 19 +     type=int,
+# 20 +     default=100,
+# 19 - parser.add_argument('--num_epochs', type=int, default=20,
+# 19 ?                                    ----------------------
+# 22 + parser.add_argument('--num_epochs',
+# 23 +                     type=int,
+# 24 +                     default=20,
+# 20 -     help='Number of training epoch. Default: 20')
+# 25 +                     help='Number of training epoch. Default: 20')
+# 25 ? ++++++++++++++++
+# 21 - parser.add_argument('--learning_rate', type=float, default=1e-3,
+# 21 ?                                       --------------------------
+# 26 + parser.add_argument('--learning_rate',
+# 27 +                     type=float,
+# 28 +                     default=1e-3,
+# 22 -     help='Learning rate during optimization. Default: 1e-3')
+# 29 +                     help='Learning rate during optimization. Default: 1e-3')
+# 29 ? ++++++++++++++++
+# 23 - parser.add_argument('--drop_rate', type=float, default=0.5,
+# 30 + parser.add_argument('--drop_rate',
+# 31 +                     type=float,
+# 32 +                     default=0.5,
+# 24 -     help='Drop rate of the Dropout Layer. Default: 0.5')
+# 33 +                     help='Drop rate of the Dropout Layer. Default: 0.5')
+# 33 ? ++++++++++++++++
+# 25 - parser.add_argument('--is_train', type=bool, default=True,
+# 34 + parser.add_argument('--is_train',
+# 35 +                     type=bool,
+# 36 +                     default=True,
+# 26 -     help='True to train and False to inference. Default: True')
+# 37 +                     help='True to train and False to inference. Default: True')
+# 37 ? ++++++++++++++++
+# 27 - parser.add_argument('--data_dir', type=str, default='../cifar-10_data',
+# 38 + parser.add_argument('--data_dir',
+# 39 +                     type=str,
+# 40 +                     default='../cifar-10_data',
+# 28 -     help='Data directory. Default: ../cifar-10_data')
+# 41 +                     help='Data directory. Default: ../cifar-10_data')
+# 41 ? ++++++++++++++++
+# 29 - parser.add_argument('--train_dir', type=str, default='./train',
+# 42 + parser.add_argument(
+# 43 +     '--train_dir',
+# 44 +     type=str,
+# 45 +     default='./train',
+# 31 - parser.add_argument('--inference_version', type=int, default=0,
+# 47 + parser.add_argument(
+# 48 +     '--inference_version',
+# 49 +     type=int,
+# 50 +     default=0,
+# 32 -     help='The version for inference. Set 0 to use latest checkpoint. Default: 0')
+# 32 ?                                                                                 -
+# 51 +     help='The version for inference. Set 0 to use latest checkpoint. Default: 0'
+# 52 + )
+# 53 +
+# 54 + parser.add_argument("--model_name", type=str,
+# 55 +                     default="mlp", help="Model name.")
+# 56 + parser.add_argument("--batch_norm", action="store_true")
+# 58 +
+# 59 +
+# 60 + def plot(epochs, train, test, label, file="plot.png"):
+# 61 +     plt.figure()
+# 62 +     plt.plot(epochs, train, label="Training")
+# 63 +     plt.plot(epochs, test, label="Validating")
+# 64 +     plt.xlabel("Epochs")
+# 65 +     plt.ylabel(label)
+# 66 +     plt.legend()
+# 67 +     plt.savefig("plots/"+file)
+# 55 - def train_epoch(model, X, y, optimizer): # Training Process
+# 89 + def train_epoch(model, X, y, optimizer):  # Training Process
+# 89 ?                                          +
+# 95 +         X_batch, y_batch = torch.from_numpy(
+# 61 -         X_batch, y_batch = torch.from_numpy(X[st:ed]).to(device), torch.from_numpy(y[st:ed]).to(device)
+# 61 ?         -------- ------- - ^^^^^^^^^^^^^^^^^
+# 96 +             X[st:ed]).to(device), torch.from_numpy(y[st:ed]).to(device)
+# 96 ?            ^
+# 76 - def valid_epoch(model, X, y): # Valid Process
+# 111 + def valid_epoch(model, X, y):  # Valid Process
+# 111 ?                               +
+# 116 +         X_batch, y_batch = torch.from_numpy(
+# 81 -         X_batch, y_batch = torch.from_numpy(X[st:ed]).to(device), torch.from_numpy(y[st:ed]).to(device)
+# 81 ?         -------- ------- - ^^^^^^^^^^^^^^^^^
+# 117 +             X[st:ed]).to(device), torch.from_numpy(y[st:ed]).to(device)
+# 117 ?            ^
+# 94 - def inference(model, X): # Test Process
+# 130 + def inference(model, X):  # Test Process
+# 130 ?                          +
+# 108 -         mlp_model = Model(drop_rate=drop_rate)
+# 144 +         mlp_model = Model(batch_norm=args.batch_norm, drop_rate=args.drop_rate)
+# 155 +         epochs = []
+# 156 +         train_data = {"loss": [], "acc": []}
+# 157 +         val_data = {"loss": [], "acc": []}
+# 119 -         for epoch in range(1, args.num_epochs+1):
+# 158 +         for epoch in range(1, args.num_epochs + 1):
+# 158 ?                                              + +
+# 121 -             train_acc, train_loss = train_epoch(mlp_model, X_train, y_train, optimizer)
+# 121 ?                                                                             -----------
+# 160 +             train_acc, train_loss = train_epoch(mlp_model, X_train, y_train,
+# 161 +                                                 optimizer)
+# 136 -             print("Epoch " + str(epoch) + " of " + str(args.num_epochs) + " took " + str(epoch_time) + "s")
+# 136 ?                                                                          ----------------------------------
+# 176 +             print("Epoch " + str(epoch) + " of " + str(args.num_epochs) +
+# 137 -             print("  learning rate:                 " + str(optimizer.param_groups[0]['lr']))
+# 177 +                   " took " + str(epoch_time) + "s")
+# 178 +             print("  learning rate:                 " +
+# 179 +                   str(optimizer.param_groups[0]['lr']))
+# 193 +             epochs.append(epoch)
+# 194 +             train_data["acc"].append(train_acc)
+# 195 +             train_data["loss"].append(train_loss)
+# 196 +             val_data["acc"].append(val_acc)
+# 197 +             val_data["loss"].append(val_loss)
+# 198 +         plot(epochs, train_data["acc"], val_data["acc"],
+# 199 +              "Accuracy", args.model_name+"_acc.png")
+# 200 +         plot(epochs, train_data["loss"], val_data["loss"],
+# 201 +              "Loss", args.model_name+"_loss.png")
+# 206 +         model_path = os.path.join(
+# 155 -         model_path = os.path.join(args.train_dir, 'checkpoint_%d.pth.tar' % args.inference_version)
+# 155 ?         ---------- - ^^^^^^^^^^^^^
+# 207 +             args.train_dir, 'checkpoint_%d.pth.tar' % args.inference_version)
+# 207 ?           ^^
+
