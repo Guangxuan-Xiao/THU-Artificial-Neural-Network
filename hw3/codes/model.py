@@ -15,7 +15,8 @@ class RNN(nn.Module):
             wordvec,  # pretrained wordvec matrix
             dataloader,  # dataloader
             cell_type="GRU",  # cell type,
-            layer_norm=False
+            layer_norm=False,
+            residual=False,
     ):
 
         super().__init__()
@@ -46,7 +47,9 @@ class RNN(nn.Module):
 
         # intialize other layers
         self.linear = nn.Linear(num_units, num_vocabs)
-        self.layer_norm = nn.LayerNorm(num_embed_units) if layer_norm else None
+        self.layer_norms = nn.Sequential(nn.LayerNorm(num_embed_units), *[nn.LayerNorm(
+            num_units) for _ in range(num_layers - 1)]) if layer_norm else None
+        self.residual = residual
 
     def maskNLLLoss(self, logits: torch.tensor, gts: torch.tensor, device):
         # Reference: https://pytorch.org/tutorials/beginner/chatbot_tutorial.html
@@ -88,8 +91,6 @@ class RNN(nn.Module):
         # implement embedding layer
         # shape: (batch_size, length, num_embed_units)
         embedding = self.wordvec(sent)
-        if self.layer_norm is not None:
-            embedding = self.layer_norm(embedding)
         # TODO END
 
         now_state = []
@@ -102,7 +103,13 @@ class RNN(nn.Module):
             hidden = embedding[:, i]
             for j, cell in enumerate(self.cells):
                 # shape: (batch_size, num_units)
-                hidden, now_state[j] = cell(hidden, now_state[j])
+                if self.layer_norms is not None:
+                    hidden = self.layer_norms[j](hidden)
+                new_hidden, now_state[j] = cell(hidden, now_state[j])
+                if self.residual and hidden.size(1) == new_hidden.size(1):
+                    hidden = new_hidden + hidden
+                else:
+                    hidden = new_hidden
             logits = self.linear(hidden)  # shape: (batch_size, num_vocabs)
             logits_per_step.append(logits)
         # TODO START
@@ -153,7 +160,13 @@ class RNN(nn.Module):
 
             hidden = embedding
             for j, cell in enumerate(self.cells):
-                hidden, now_state[j] = cell(hidden, now_state[j])
+                if self.layer_norms is not None:
+                    hidden = self.layer_norms[j](hidden)
+                new_hidden, now_state[j] = cell(hidden, now_state[j])
+                if self.residual and hidden.size(1) == new_hidden.size(1):
+                    hidden = new_hidden + hidden
+                else:
+                    hidden = new_hidden
             logits = self.linear(hidden)  # shape: (batch_size, num_vocabs)
 
             if decode_strategy == "random":

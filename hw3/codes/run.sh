@@ -1,14 +1,14 @@
-rm -rf ../logs/ ../plots ../outputs ../runs
 mkdir -p ../logs/
 mkdir -p ../plots/
 mkdir -p ../outputs/
-CELLS="LSTM GRU RNN"
+CELLS="GRU LSTM RNN"
 LAYERS="2 1"
-UNITS="64 128"
-for CELL in $CELLS; do
-    for LAYER in $LAYERS; do
-        for UNIT in $UNITS; do
+UNITS="128 64"
+for UNIT in $UNITS; do
+    for CELL in $CELLS; do
+        for LAYER in $LAYERS; do
             NAME=${CELL}_l${LAYER}_${UNIT}
+            rm -rf ../runs/$NAME
             CUDA_VISIBLE_DEVICES=7 python -u main.py \
                 --name ${NAME} \
                 --decode_strategy top-p \

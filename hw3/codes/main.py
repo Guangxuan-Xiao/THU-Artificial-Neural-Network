@@ -79,7 +79,8 @@ parser.add_argument('--max_probability',
                     type=float,
                     default=1,
                     help='The p for top-p decoding. Default: 1')
-parser.add_argument("--layer_norm", action="store_true")
+parser.add_argument("--layer_norm", action="store_true", default=False)
+parser.add_argument("--residual", action="store_true", default=False)
 args = parser.parse_args()
 if not args.test:
     writer = SummaryWriter("../runs/%s" % args.name)
@@ -92,7 +93,7 @@ def plot(epochs, train, test, label, file="plot.png"):
     plt.xlabel("Epochs")
     plt.ylabel(label)
     plt.legend()
-    plt.savefig("../plots/"+file)
+    plt.savefig("../plots/" + file)
 
 
 def fast_evaluate(model, dataloader, datakey, device):
@@ -186,8 +187,7 @@ if __name__ == '__main__':
             dataloader.frequent_vocab_size,
             torch.tensor(wordvec.load_matrix(args.embed_units,
                                              dataloader.frequent_vocab_list),
-                         dtype=torch.float,
-                         device=device), dataloader, cell_type=args.cell)
+                         dtype=torch.float, device=device), dataloader, cell_type=args.cell, layer_norm=args.layer_norm, residual=args.residual)
         model.to(device)
 
         optimizer = optim.Adam(model.parameters(),
@@ -233,6 +233,7 @@ if __name__ == '__main__':
 
             writer.add_scalars(
                 "Loss", {"Train": train_loss, "Validation": val_loss}, epoch)
+            writer.flush()
             epochs.append(epoch+1)
             samples = show_example(model, dataloader, 5, device)
 
