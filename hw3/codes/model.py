@@ -14,7 +14,8 @@ class RNN(nn.Module):
             num_vocabs,  # vocabulary size
             wordvec,  # pretrained wordvec matrix
             dataloader,  # dataloader
-            cell_type="GRU"  # cell type
+            cell_type="GRU",  # cell type,
+            layer_norm=False
     ):
 
         super().__init__()
@@ -31,13 +32,13 @@ class RNN(nn.Module):
         assert (num_layers >= 1)
         if cell_type == "RNN":
             self.cells = nn.Sequential(RNNCell(num_embed_units, num_units),
-                                       *[RNNCell(num_embed_units, num_units) for _ in range(num_layers - 1)])
+                                       *[RNNCell(num_units, num_units) for _ in range(num_layers - 1)])
         elif cell_type == "GRU":
             self.cells = nn.Sequential(GRUCell(num_embed_units, num_units),
-                                       *[GRUCell(num_embed_units, num_units) for _ in range(num_layers - 1)])
+                                       *[GRUCell(num_units, num_units) for _ in range(num_layers - 1)])
         elif cell_type == "LSTM":
             self.cells = nn.Sequential(LSTMCell(num_embed_units, num_units),
-                                       *[LSTMCell(num_embed_units, num_units) for _ in range(num_layers - 1)])
+                                       *[LSTMCell(num_units, num_units) for _ in range(num_layers - 1)])
         else:
             raise NotImplementedError("Unknown Cell Type")
         self.cell_type = cell_type
@@ -45,6 +46,7 @@ class RNN(nn.Module):
 
         # intialize other layers
         self.linear = nn.Linear(num_units, num_vocabs)
+        self.layer_norm = nn.LayerNorm(num_embed_units) if layer_norm else None
 
     def maskNLLLoss(self, logits: torch.tensor, gts: torch.tensor, device):
         # Reference: https://pytorch.org/tutorials/beginner/chatbot_tutorial.html
@@ -86,6 +88,8 @@ class RNN(nn.Module):
         # implement embedding layer
         # shape: (batch_size, length, num_embed_units)
         embedding = self.wordvec(sent)
+        if self.layer_norm is not None:
+            embedding = self.layer_norm(embedding)
         # TODO END
 
         now_state = []

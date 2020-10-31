@@ -79,6 +79,7 @@ parser.add_argument('--max_probability',
                     type=float,
                     default=1,
                     help='The p for top-p decoding. Default: 1')
+parser.add_argument("--layer_norm", action="store_true")
 args = parser.parse_args()
 if not args.test:
     writer = SummaryWriter("../runs/%s" % args.name)
@@ -230,8 +231,8 @@ if __name__ == '__main__':
             train_losses.append(train_loss)
             val_losses.append(val_loss)
 
-            writer.add_scalar("Train Loss", train_loss, epoch)
-            writer.add_scalar("Val Loss", val_loss, epoch)
+            writer.add_scalars(
+                "Loss", {"Train": train_loss, "Validation": val_loss}, epoch)
             epochs.append(epoch+1)
             samples = show_example(model, dataloader, 5, device)
 
@@ -260,7 +261,7 @@ if __name__ == '__main__':
 
         _, ppl = fast_evaluate(model, dataloader, "test", device)
         result = evaluate(model, dataloader, "test", device)
-        with open('%s_output.txt' % args.name, 'w') as fout:
+        with open('../outputs/%s_output.txt' % args.name, 'w') as fout:
             for sent in result["gen"]:
                 fout.write(" ".join(sent) + "\n")
 

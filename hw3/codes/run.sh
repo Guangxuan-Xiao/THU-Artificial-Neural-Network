@@ -1,8 +1,10 @@
+rm -rf ../logs/ ../plots ../outputs ../runs
 mkdir -p ../logs/
 mkdir -p ../plots/
-CELLS="RNN LSTM GRU"
-LAYERS="1 2"
-UNITS="64 256"
+mkdir -p ../outputs/
+CELLS="LSTM GRU RNN"
+LAYERS="2 1"
+UNITS="64 128"
 for CELL in $CELLS; do
     for LAYER in $LAYERS; do
         for UNIT in $UNITS; do
@@ -15,7 +17,8 @@ for CELL in $CELLS; do
                 --learning_rate 1e-3 \
                 --units ${UNIT} \
                 --cell $CELL \
-                --batch_size 100 \
+                --batch_size 64 \
+                --layers $LAYER \
                 --num_epochs 30 |
                 tee ../logs/${NAME}_train.log
 
@@ -28,7 +31,8 @@ for CELL in $CELLS; do
                 --learning_rate 1e-3 \
                 --units ${UNIT} \
                 --cell $CELL \
-                --batch_size 100 \
+                --batch_size 128 \
+                --layers $LAYER \
                 --num_epochs 30 |
                 tee ../logs/${NAME}_test.log
         done

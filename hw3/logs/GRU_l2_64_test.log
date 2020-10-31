@@ -1,9 +1,9 @@
-Namespace(batch_size=100, cell='GRU', data_dir='./data', decode_strategy='top-p', embed_units=300, layers=1, learning_rate=0.001, max_probability=0.8, name='GRU_l2_64', num_epochs=30, temperature=0.8, test='GRU_l2_64', train_dir='./train', units=64, wordvec_dir='./wordvec')
+Namespace(batch_size=128, cell='GRU', data_dir='./data', decode_strategy='top-p', embed_units=300, layers=2, learning_rate=0.001, max_probability=0.8, name='GRU_l2_64', num_epochs=30, temperature=0.8, test='GRU_l2_64', train_dir='./train', units=64, wordvec_dir='./wordvec')
 INFO: local path: ./data
 INFO: processor type: Default
 INFO: local path: ./wordvec
 INFO: processor type: Default
 Loading model from ./train/checkpoint_GRU_l2_64.pth.tar
-test set restart, 50 batches and 0 left
-        test_set, perplexity 18.86, forward BLEU 0.434, backward BLEU 0.335, harmonic BLEU 0.378
+test set restart, 39 batches and 8 left
+        test_set, perplexity 19.27, forward BLEU 0.443, backward BLEU 0.340, harmonic BLEU 0.384
         test_set, write inference results to output.txt
