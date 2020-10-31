@@ -271,5 +271,7 @@ if __name__ == '__main__':
             %
             (ppl, result["fw-bleu"], result["bw-bleu"], result["fw-bw-bleu"]))
         print("        test_set, write inference results to output.txt")
+        for sent in result["gen"][:10]:
+            print(" ".join(sent))
 if not args.test:
     writer.close()

@@ -1,0 +1,19 @@
+Namespace(batch_size=128, cell='GRU', data_dir='./data', decode_strategy='top-p', embed_units=300, layer_norm=True, layers=2, learning_rate=0.001, max_probability=0.8, name='GRU_l2_300_final', num_epochs=30, residual=True, temperature=0.8, test='GRU_l2_300_final', train_dir='./train', units=300, wordvec_dir='./wordvec')
+INFO: local path: ./data
+INFO: processor type: Default
+INFO: local path: ./wordvec
+INFO: processor type: Default
+Loading model from ./train/checkpoint_GRU_l2_300_final.pth.tar
+test set restart, 39 batches and 8 left
+        test_set, perplexity 16.98, forward BLEU 0.465, backward BLEU 0.348, harmonic BLEU 0.398
+        test_set, write inference results to output.txt
+A dog is watching a pizza box from a car window .
+The man is sitting on the step of the steer on a park bench .
+A bathroom with two urinals sitting next to each other and a fan rug .
+A yellow bus driving down a street with a building in the background .
+A woman sits on a bench near a red and white photo .
+A traffic light that is on the side of a road .
+A bathroom with a toilet , sink and towel rack .
+A man with his arms spread and a surfboard is on a motor bike .
+A traffic light with a large red brick building in the background .
+A woman holding up his food at a table with greens of food .

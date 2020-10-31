@@ -1,0 +1,466 @@
+########################
+# Additional Files
+########################
+# run_basic.sh
+# train
+# run_ln.sh
+# run_final.sh
+# wordvec
+# data
+# test_decode.sh
+# run_res.sh
+# __pycache__
+
+########################
+# Filled Code
+########################
+# ../codes/rnn_cell.py:1
+        self.input_layer = nn.Linear(input_size, 3 * hidden_size, bias=False)
+        self.hidden_layer = nn.Linear(hidden_size, 3 * hidden_size, bias=False)
+
+# ../codes/rnn_cell.py:2
+        return torch.randn(batch_size, self.hidden_size, device=device)
+
+# ../codes/rnn_cell.py:3
+        gate_x = self.input_layer(incoming).squeeze()
+        gate_h = self.hidden_layer(state).squeeze()
+        i_r, i_i, i_n = gate_x.chunk(3, 1)
+        h_r, h_i, h_n = gate_h.chunk(3, 1)
+        reset_gate = F.sigmoid(i_r + h_r)
+        input_gate = F.sigmoid(i_i + h_i)
+        new_gate = F.tanh(i_n + (reset_gate * h_n))
+        output = new_gate + input_gate * (state - new_gate)
+        return output, output
+
+# ../codes/rnn_cell.py:4
+        self.input_layer = nn.Linear(input_size, 4 * hidden_size, bias=False)
+        self.hidden_layer = nn.Linear(hidden_size, 4 * hidden_size, bias=False)
+
+# ../codes/rnn_cell.py:5
+        return torch.randn(batch_size, self.hidden_size, device=device), torch.randn(batch_size, self.hidden_size, device=device)
+
+# ../codes/rnn_cell.py:6
+        h, c = state
+        gates = self.input_layer(incoming) + self.hidden_layer(h)
+        gates = gates.squeeze()
+        in_gate, forget_gate, cell_gate, out_gate = gates.chunk(4, 1)
+        in_gate = F.sigmoid(in_gate)
+        forget_gate = F.sigmoid(forget_gate)
+        cell_gate = F.sigmoid(cell_gate)
+        out_gate = F.sigmoid(out_gate)
+        new_c = torch.mul(c, forget_gate) + torch.mul(in_gate, cell_gate)
+        new_h = torch.mul(out_gate, F.tanh(new_c))
+        return new_h, (new_h, new_c)
+
+# ../codes/model.py:1
+        assert (num_layers >= 1)
+        if cell_type == "RNN":
+            self.cells = nn.Sequential(RNNCell(num_embed_units, num_units),
+                                       *[RNNCell(num_units, num_units) for _ in range(num_layers - 1)])
+        elif cell_type == "GRU":
+            self.cells = nn.Sequential(GRUCell(num_embed_units, num_units),
+                                       *[GRUCell(num_units, num_units) for _ in range(num_layers - 1)])
+        elif cell_type == "LSTM":
+            self.cells = nn.Sequential(LSTMCell(num_embed_units, num_units),
+                                       *[LSTMCell(num_units, num_units) for _ in range(num_layers - 1)])
+        else:
+            raise NotImplementedError("Unknown Cell Type")
+        self.cell_type = cell_type
+
+# ../codes/model.py:2
+        # shape: (batch_size, length, num_embed_units)
+        embedding = self.wordvec(sent)
+
+# ../codes/model.py:3
+        for step, logits in enumerate(logits_per_step):
+            # Teacher Forcing
+            loss += self.maskNLLLoss(logits, sent[:, step + 1], device)
+        loss /= length.sum().item()
+
+# ../codes/model.py:4
+            # shape: (batch_size, num_embed_units)
+            embedding = self.wordvec(now_token)
+
+# ../codes/model.py:5
+                prob = (self.top_p_filtering(logits, max_probability=max_probability)).softmax(
+                    dim=-1)  # shape: (batch_size, num_vocabs)
+                now_token = torch.multinomial(
+                    prob, 1)[:, 0]  # shape: (batch_size)
+
+
+########################
+# References
+########################
+
+########################
+# Other Modifications
+########################
+# _codes/main.py -> ../codes/main.py
+# 1 + from model import RNN
+# 2 + import cotk
+# 11 + import matplotlib.pyplot as plt
+# 12 + from tensorboardX import SummaryWriter
+# 12 - import cotk
+# 13 -
+# 14 - from model import RNN
+# 18 - parser.add_argument('--name', type=str, default="run",
+# 19 + parser.add_argument('--name',
+# 20 +                     type=str,
+# 21 +                     default="run",
+# 19 -     help='Experiment name. Default: run')
+# 22 +                     help='Experiment name. Default: run')
+# 22 ? ++++++++++++++++
+# 23 + parser.add_argument('--cell',
+# 24 +                     type=str,
+# 25 +                     default="GRU")
+# 20 - parser.add_argument('--num_epochs', type=int, default=20,
+# 20 ?                                    ----------------------
+# 26 + parser.add_argument('--num_epochs',
+# 27 +                     type=int,
+# 28 +                     default=20,
+# 21 -     help='Number of training epoch. Default: 20')
+# 29 +                     help='Number of training epoch. Default: 20')
+# 29 ? ++++++++++++++++
+# 22 - parser.add_argument('--batch_size', type=int, default=32,
+# 22 ?                                    ----------------------
+# 30 + parser.add_argument('--batch_size',
+# 31 +                     type=int,
+# 32 +                     default=32,
+# 23 -     help='The number of batch_size. Default: 32')
+# 33 +                     help='The number of batch_size. Default: 32')
+# 33 ? ++++++++++++++++
+# 24 - parser.add_argument('--learning_rate', type=float, default=1e-3,
+# 24 ?                                       --------------------------
+# 34 + parser.add_argument('--learning_rate',
+# 35 +                     type=float,
+# 36 +                     default=1e-3,
+# 25 -     help='Learning rate during optimization. Default: 1e-3')
+# 37 +                     help='Learning rate during optimization. Default: 1e-3')
+# 37 ? ++++++++++++++++
+# 26 - parser.add_argument('--test', type=str, default=None,
+# 38 + parser.add_argument(
+# 39 +     '--test',
+# 40 +     type=str,
+# 41 +     default=None,
+# 28 - parser.add_argument('--embed_units', type=int, default=300,
+# 28 ?                                     -----------------------
+# 43 + parser.add_argument('--embed_units',
+# 44 +                     type=int,
+# 45 +                     default=300,
+# 29 -     help='Size of word embedding. Default: 300')
+# 46 +                     help='Size of word embedding. Default: 300')
+# 46 ? ++++++++++++++++
+# 30 - parser.add_argument('--units', type=int, default=64,
+# 47 + parser.add_argument('--units',
+# 48 +                     type=int,
+# 49 +                     default=64,
+# 31 -     help='Size of RNN. Default: 64')
+# 50 +                     help='Size of RNN. Default: 64')
+# 50 ? ++++++++++++++++
+# 32 - parser.add_argument('--layers', type=int, default=1,
+# 32 ?                                ---------------------
+# 51 + parser.add_argument('--layers',
+# 52 +                     type=int,
+# 53 +                     default=1,
+# 33 -     help='Number of layers of RNN. Default: 1')
+# 54 +                     help='Number of layers of RNN. Default: 1')
+# 54 ? ++++++++++++++++
+# 34 - parser.add_argument('--data_dir', type=str, default='./data',
+# 55 + parser.add_argument('--data_dir',
+# 56 +                     type=str,
+# 57 +                     default='./data',
+# 35 -     help='Data directory. Default: ../data')
+# 58 +                     help='Data directory. Default: ../data')
+# 58 ? ++++++++++++++++
+# 36 - parser.add_argument('--wordvec_dir', type=str, default='./wordvec',
+# 59 + parser.add_argument('--wordvec_dir',
+# 60 +                     type=str,
+# 61 +                     default='./wordvec',
+# 37 -     help='Wordvector directory. Default: ../wordvec')
+# 62 +                     help='Wordvector directory. Default: ../wordvec')
+# 62 ? ++++++++++++++++
+# 38 - parser.add_argument('--train_dir', type=str, default='./train',
+# 63 + parser.add_argument(
+# 64 +     '--train_dir',
+# 65 +     type=str,
+# 66 +     default='./train',
+# 40 - parser.add_argument('--decode_strategy', type=str, choices=["random", "top-p"], default="random",
+# 68 + parser.add_argument(
+# 69 +     '--decode_strategy',
+# 70 +     type=str,
+# 71 +     choices=["random", "top-p", "top-1"],
+# 72 +     default="random",
+# 42 - parser.add_argument('--temperature', type=float, default=1,
+# 42 ?                                     -----------------------
+# 74 + parser.add_argument('--temperature',
+# 75 +                     type=float,
+# 76 +                     default=1,
+# 43 -     help='The temperature for decoding. Default: 1')
+# 77 +                     help='The temperature for decoding. Default: 1')
+# 77 ? ++++++++++++++++
+# 44 - parser.add_argument('--max_probability', type=float, default=1,
+# 44 ?                                         -----------------------
+# 78 + parser.add_argument('--max_probability',
+# 79 +                     type=float,
+# 80 +                     default=1,
+# 45 -     help='The p for top-p decoding. Default: 1')
+# 81 +                     help='The p for top-p decoding. Default: 1')
+# 81 ? ++++++++++++++++
+# 82 + parser.add_argument("--layer_norm", action="store_true", default=False)
+# 83 + parser.add_argument("--residual", action="store_true", default=False)
+# 85 + if not args.test:
+# 86 +     writer = SummaryWriter("../runs/%s" % args.name)
+# 87 +
+# 88 +
+# 89 + def plot(epochs, train, test, label, file="plot.png"):
+# 90 +     plt.figure()
+# 91 +     plt.plot(epochs, train, label="Training")
+# 92 +     plt.plot(epochs, test, label="Validating")
+# 93 +     plt.xlabel("Epochs")
+# 94 +     plt.ylabel(label)
+# 95 +     plt.legend()
+# 96 +     plt.savefig("../plots/" + file)
+# 97 +
+# 52 -         metric = cotk.metric.PerplexityMetric(dataloader, reference_allvocabs_key="sent_allvocabs", reference_len_key="sent_length")
+# 53 -         for batched_data in dataloader.get_batches(datakey, batch_size=args.batch_size, shuffle=False):
+# 103 +         metric = cotk.metric.PerplexityMetric(
+# 104 +             dataloader,
+# 105 +             reference_allvocabs_key="sent_allvocabs",
+# 106 +             reference_len_key="sent_length")
+# 107 +         for batched_data in dataloader.get_batches(datakey,
+# 108 +                                                    batch_size=args.batch_size,
+# 109 +                                                    shuffle=False):
+# 64 -     model.train() # return to training mode
+# 120 +     model.train()  # return to training mode
+# 120 ?                  +
+# 125 +
+# 75 -         metric.add_metric(cotk.metric.FwBwBleuCorpusMetric(dataloader, dataloader.get_all_batch(datakey)['sent']))
+# 132 +         metric.add_metric(
+# 133 +             cotk.metric.FwBwBleuCorpusMetric(
+# 134 +                 dataloader,
+# 135 +                 dataloader.get_all_batch(datakey)['sent']))
+# 78 -             gen_sent = model.inference(min(args.batch_size, 5000 - i), device, args.decode_strategy, args.temperature, args.max_probability)
+# 138 +             gen_sent = model.inference(min(args.batch_size, 5000 - i), device,
+# 139 +                                        args.decode_strategy, args.temperature,
+# 140 +                                        args.max_probability)
+# 86 -     model.train() # return to training mode
+# 148 +     model.train()  # return to training mode
+# 148 ?                  +
+# 151 +
+# 95 -         gen_sent = model.inference(num_samples, device, args.decode_strategy, args.temperature, args.max_probability)
+# 95 ?                                                                              ----------------------------------------
+# 158 +         gen_sent = model.inference(num_samples, device, args.decode_strategy,
+# 159 +                                    args.temperature, args.max_probability)
+# 102 -     model.train() # return to training mode
+# 166 +     model.train()  # return to training mode
+# 166 ?                  +
+# 112 -     dataloader = cotk.dataloader.LanguageGeneration(args.data_dir, tokenizer="space", convert_to_lower_letter=False, min_frequent_vocab_times=0)
+# 176 +     dataloader = cotk.dataloader.LanguageGeneration(
+# 177 +         args.data_dir,
+# 178 +         tokenizer="space",
+# 179 +         convert_to_lower_letter=False,
+# 180 +         min_frequent_vocab_times=0)
+# 186 +             args.embed_units, args.units, args.layers,
+# 118 -             args.embed_units,
+# 119 -             args.units,
+# 120 -             args.layers,
+# 122 -             torch.tensor(wordvec.load_matrix(args.embed_units, dataloader.frequent_vocab_list), dtype=torch.float, device=device),
+# 123 -             dataloader)
+# 188 +             torch.tensor(wordvec.load_matrix(args.embed_units,
+# 189 +                                              dataloader.frequent_vocab_list),
+# 190 +                          dtype=torch.float, device=device), dataloader, cell_type=args.cell, layer_norm=args.layer_norm, residual=args.residual)
+# 126 -         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0)
+# 193 +         optimizer = optim.Adam(model.parameters(),
+# 194 +                                lr=args.learning_rate,
+# 195 +                                weight_decay=0)
+# 129 -
+# 198 +         train_losses = []
+# 199 +         val_losses = []
+# 200 +         epochs = []
+# 134 -             for batch, batched_data in enumerate(dataloader.get_batches("train", batch_size=args.batch_size, shuffle=True)):
+# 205 +             for batch, batched_data in enumerate(
+# 206 +                     dataloader.get_batches("train",
+# 207 +                                            batch_size=args.batch_size,
+# 208 +                                            shuffle=True)):
+# 216 +                     print("Epoch %d Batch %d, train loss %f" %
+# 142 -                     print("Epoch %d Batch %d, train loss %f" % (epoch, batch, np.mean(losses[-100:])))
+# 142 ?                     ------------ -- ----- --- ----- ----------
+# 217 +                           (epoch, batch + 1, np.mean(losses[-100:])))
+# 217 ?                                        ++++
+# 151 -                 with open(os.path.join(args.train_dir, 'checkpoint_%s.pth.tar' % args.name), 'wb') as fout:
+# 226 +                 with open(
+# 227 +                         os.path.join(args.train_dir,
+# 228 +                                      'checkpoint_%s.pth.tar' % args.name),
+# 229 +                         'wb') as fout:
+# 231 +             train_losses.append(train_loss)
+# 232 +             val_losses.append(val_loss)
+# 234 +             writer.add_scalars(
+# 235 +                 "Loss", {"Train": train_loss, "Validation": val_loss}, epoch)
+# 236 +             writer.flush()
+# 237 +             epochs.append(epoch+1)
+# 157 -             print("Epoch " + str(epoch) + " of " + str(args.num_epochs) + " took " + str(epoch_time) + "s")
+# 157 ?                                                                          ----------------------------------
+# 241 +             print("Epoch " + str(epoch) + " of " + str(args.num_epochs) +
+# 242 +                   " took " + str(epoch_time) + "s")
+# 251 +         plot(epochs, train=train_losses, test=val_losses,
+# 252 +              label="Loss", file="%s_loss.png" % args.name)
+# 168 -         model_path = os.path.join(args.train_dir, 'checkpoint_%s.pth.tar' % args.test)
+# 255 +         model_path = os.path.join(args.train_dir,
+# 256 +                                   'checkpoint_%s.pth.tar' % args.test)
+# 177 -         with open('output.txt', 'w') as fout:
+# 265 +         with open('../outputs/%s_output.txt' % args.name, 'w') as fout:
+# 265 ?                    ++++++++++++++           ++++++++++++
+# 181 -         print("        test_set, perplexity %.2f, forward BLEU %.3f, backward BLEU %.3f, harmonic BLEU %.3f" % (ppl, result["fw-bleu"], result["bw-bleu"], result["fw-bw-bleu"]))
+# 269 +         print(
+# 270 +             "        test_set, perplexity %.2f, forward BLEU %.3f, backward BLEU %.3f, harmonic BLEU %.3f"
+# 271 +             %
+# 272 +             (ppl, result["fw-bleu"], result["bw-bleu"], result["fw-bw-bleu"]))
+# 274 +         for sent in result["gen"][:10]:
+# 275 +             print(" ".join(sent))
+# 276 + if not args.test:
+# 277 +     writer.close()
+# _codes/rnn_cell.py -> ../codes/rnn_cell.py
+# 4 +
+# 15 -         #return the initial state
+# 16 +         # return the initial state
+# 16 ?          +
+# 21 -         new_state = output # stored for next step
+# 22 +         new_state = output  # stored for next step
+# 22 ?                            +
+# 24 +
+# 58 +
+# _codes/model.py -> ../codes/model.py
+# 5 -
+# 7 +
+# 9 -     def __init__(self,
+# 9 ?                  -----
+# 9 +     def __init__(
+# 10 +             self,
+# 11 -             num_units,        # RNN units size
+# 11 ?                         ------
+# 12 +             num_units,  # RNN units size
+# 12 -             num_layers,       # number of RNN layers
+# 12 ?                          -----
+# 13 +             num_layers,  # number of RNN layers
+# 13 -             num_vocabs,       # vocabulary size
+# 13 ?                          -----
+# 14 +             num_vocabs,  # vocabulary size
+# 14 -             wordvec,            # pretrained wordvec matrix
+# 14 ?                     ----------
+# 15 +             wordvec,  # pretrained wordvec matrix
+# 15 -             dataloader):      # dataloader
+# 15 ?                       ^^^^^^
+# 16 +             dataloader,  # dataloader
+# 16 ?                       ^
+# 17 +             cell_type="GRU",  # cell type,
+# 18 +             layer_norm=False,
+# 19 +             residual=False,
+# 20 +     ):
+# 20 -         self.wordvec = wordvec
+# 25 +         self.num_vocabs = num_vocabs
+# 26 +         self.num_units = num_units
+# 27 +         self.wordvec = nn.Embedding.from_pretrained(wordvec)
+# 50 +         self.layer_norms = nn.Sequential(nn.LayerNorm(num_embed_units), *[nn.LayerNorm(
+# 51 +             num_units) for _ in range(num_layers - 1)]) if layer_norm else None
+# 52 +         self.residual = residual
+# 53 +
+# 54 +     def maskNLLLoss(self, logits: torch.tensor, gts: torch.tensor, device):
+# 55 +         # Reference: https://pytorch.org/tutorials/beginner/chatbot_tutorial.html
+# 56 +         # Reference: https://blog.csdn.net/uhauha2929/article/details/83019995
+# 57 +         mask = (gts != 0).view(-1, 1)
+# 58 +         logits = F.softmax(logits, dim=1)
+# 59 +         crossEntropy = -torch.log(torch.gather(logits, 1, gts.unsqueeze(1)))
+# 60 +         loss = crossEntropy.masked_select(mask).sum()
+# 61 +         loss = loss.to(device)
+# 62 +         return loss
+# 63 +
+# 64 +     def get_gts(self, label: torch.tensor, device):
+# 65 +         batch_size = label.size(0)
+# 66 +         return torch.zeros((batch_size, self.num_vocabs), device=device).scatter_(1, label.unsqueeze(1), 1)
+# 37 -         sent = torch.tensor(batched_data["sent"], dtype=torch.long, device=device) # shape: (batch_size, length)
+# 70 +         sent = torch.tensor(batched_data["sent"],
+# 71 +                             dtype=torch.long,
+# 72 +                             device=device)  # shape: (batch_size, length)
+# 47 -         length = torch.tensor(batched_data["sent_length"], dtype=torch.long, device=device) # shape: (batch)
+# 82 +         length = torch.tensor(batched_data["sent_length"],
+# 83 +                               dtype=torch.long,
+# 84 +                               device=device)  # shape: (batch)
+# 105 +                 # shape: (batch_size, num_units)
+# 106 +                 if self.layer_norms is not None:
+# 107 +                     hidden = self.layer_norms[j](hidden)
+# 67 -                 hidden, now_state[j] = cell(hidden, now_state[j]) # shape: (batch_size, num_units)
+# 67 ?                                                                  ---------------------------------
+# 108 +                 new_hidden, now_state[j] = cell(hidden, now_state[j])
+# 108 ?                 ++++
+# 109 +                 if self.residual and hidden.size(1) == new_hidden.size(1):
+# 110 +                     hidden = new_hidden + hidden
+# 111 +                 else:
+# 112 +                     hidden = new_hidden
+# 68 -             logits = self.linear(hidden) # shape: (batch_size, num_vocabs)
+# 113 +             logits = self.linear(hidden)  # shape: (batch_size, num_vocabs)
+# 113 ?                                          +
+# 70 -
+# 75 -
+# 124 +     def top_p_filtering(self, logits, max_probability=1.0, filter_value=-1e20):
+# 125 +         # Reference: https://gist.github.com/thomwolf/1a5a29f6962089e871b94cbd09daf317
+# 126 +         sorted_logits, sorted_indices = torch.sort(
+# 127 +             logits, descending=True, dim=1)
+# 128 +         cumulative_probs = torch.cumsum(
+# 129 +             F.softmax(sorted_logits, dim=1), dim=1)
+# 130 +         sorted_indices_to_remove = cumulative_probs > max_probability
+# 131 +         # Shift the indices to the right to keep also the first token above the threshold
+# 132 +         sorted_indices_to_remove[...,
+# 133 +                                  1:] = sorted_indices_to_remove[..., :-1].clone()
+# 134 +         sorted_indices_to_remove[..., 0] = 0
+# 135 +         batch_size = logits.size(0)
+# 136 +         for i in range(batch_size):
+# 137 +             indices_to_remove = sorted_indices[i, sorted_indices_to_remove[i]]
+# 138 +             logits[i, indices_to_remove] = filter_value
+# 139 +         return logits
+# 140 +
+# 78 -     def inference(self, batch_size, device, decode_strategy, temperature, max_probability):
+# 78 ?                                                                          ------------------
+# 141 +     def inference(self, batch_size, device, decode_strategy, temperature,
+# 142 +                   max_probability):
+# 80 -         now_token = torch.tensor([self.dataloader.go_id] * batch_size, dtype=torch.long, device=device)
+# 80 ?                                                                       ---------------------------------
+# 144 +         now_token = torch.tensor([self.dataloader.go_id] * batch_size,
+# 145 +                                  dtype=torch.long,
+# 146 +                                  device=device)
+# 88 -         for _ in range(50): # max sentecne length
+# 154 +         for _ in range(50):  # max sentecne length
+# 154 ?                             +
+# 89 -
+# 163 +                 if self.layer_norms is not None:
+# 164 +                     hidden = self.layer_norms[j](hidden)
+# 97 -                 hidden, now_state[j] = cell(hidden, now_state[j])
+# 165 +                 new_hidden, now_state[j] = cell(hidden, now_state[j])
+# 165 ?                 ++++
+# 166 +                 if self.residual and hidden.size(1) == new_hidden.size(1):
+# 167 +                     hidden = new_hidden + hidden
+# 168 +                 else:
+# 169 +                     hidden = new_hidden
+# 98 -             logits = self.linear(hidden) # shape: (batch_size, num_vocabs)
+# 170 +             logits = self.linear(hidden)  # shape: (batch_size, num_vocabs)
+# 170 ?                                          +
+# 173 +                 prob = (logits / temperature).softmax(
+# 101 -                 prob = (logits / temperature).softmax(dim=-1) # shape: (batch_size, num_vocabs)
+# 101 ?                 ---- - ------- - ---------------------
+# 174 +                     dim=-1)  # shape: (batch_size, num_vocabs)
+# 174 ?                            +
+# 102 -                 now_token = torch.multinomial(prob, 1)[:, 0] # shape: (batch_size)
+# 102 ?                                                    -------------------------------
+# 175 +                 now_token = torch.multinomial(prob,
+# 176 +                                               1)[:, 0]  # shape: (batch_size)
+# 185 +             elif decode_strategy == "top-1":
+# 186 +                 # implement top-1 samplings
+# 187 +                 prob = (logits / temperature).softmax(
+# 188 +                     dim=-1)  # shape: (batch_size, num_vocabs)
+# 189 +                 now_token = torch.argmax(prob, 1)  # shape: (batch_size)
+# 196 +             if flag.sum().tolist(
+# 114 -             if flag.sum().tolist() == 0: # all sequences has generated the <eos> token
+# 114 ?             ---------------------
+# 197 +             ) == 0:  # all sequences has generated the <eos> token
+# 197 ?                    +
+# 116 -
+

@@ -1,0 +1,19 @@
+Namespace(batch_size=128, cell='GRU', data_dir='./data', decode_strategy='random', embed_units=300, layer_norm=True, layers=2, learning_rate=0.001, max_probability=1, name='GRU_l2_300_final', num_epochs=30, residual=True, temperature=0.8, test='GRU_l2_300_final', train_dir='./train', units=300, wordvec_dir='./wordvec')
+INFO: local path: ./data
+INFO: processor type: Default
+INFO: local path: ./wordvec
+INFO: processor type: Default
+Loading model from ./train/checkpoint_GRU_l2_300_final.pth.tar
+test set restart, 39 batches and 8 left
+        test_set, perplexity 16.98, forward BLEU 0.457, backward BLEU 0.346, harmonic BLEU 0.394
+        test_set, write inference results to output.txt
+A group of people walk around some sheep and one giraffe .
+A man in a recliner is sitting on a bench reading .
+A man on a motorcycle parked next to a man on a motorcycle .
+A large white bird standing on top of a black and white floor .
+A man sitting on top of a toilet seat down and some food .
+A couple of animals standing on a lake next to a forest .
+A fire hydrant sitting on a curb near a stone building .
+A living room with a mirror , coffee maker and a plate with nuts on it .
+A small car with a bicycle backed up to it ' s head .
+A giraffe running its neck and eating out of a stand .
