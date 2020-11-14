@@ -21,15 +21,19 @@ if __name__ == "__main__":
     parser.add_argument('--saving_steps', type=int, default=1000)
     parser.add_argument('--learning_rate', default=1e-3, type=float)
     parser.add_argument('--log_dir', default='./runs', type=str)
-    parser.add_argument('--data_dir', default='data', type=str, help='The path of the data directory')
-    parser.add_argument('--ckpt_dir', default='results', type=str, help='The path of the checkpoint directory')
+    parser.add_argument('--data_dir', default='data', type=str,
+                        help='The path of the data directory')
+    parser.add_argument('--ckpt_dir', default='results',
+                        type=str, help='The path of the checkpoint directory')
     args = parser.parse_args()
 
-    config = 'z-{}_batch-{}_num-train-steps-{}'.format(args.latent_dim, args.batch_size, args.num_training_steps)
+    config = 'z-{}_batch-{}_num-train-steps-{}'.format(
+        args.latent_dim, args.batch_size, args.num_training_steps)
     args.ckpt_dir = os.path.join(args.ckpt_dir, config)
     args.log_dir = os.path.join(args.log_dir, config)
 
-    device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available()
+                          and not args.no_cuda else 'cpu')
 
     dataset = Dataset(args.batch_size, args.data_dir)
     model = VAE(1, args.latent_dim).to(device)
@@ -37,10 +41,13 @@ if __name__ == "__main__":
 
     if args.do_train:
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
-        trainer = Trainer(device, model, optimizer, dataset, args.ckpt_dir, tb_writer)
-        trainer.train(args.num_training_steps, args.logging_steps, args.saving_steps)
+        trainer = Trainer(device, model, optimizer,
+                          dataset, args.ckpt_dir, tb_writer)
+        trainer.train(args.num_training_steps,
+                      args.logging_steps, args.saving_steps)
 
-    restore_ckpt_path = os.path.join(args.ckpt_dir, str(max(int(step) for step in os.listdir(args.ckpt_dir))))
+    restore_ckpt_path = os.path.join(args.ckpt_dir, str(
+        max(int(step) for step in os.listdir(args.ckpt_dir))))
     model.restore(restore_ckpt_path)
 
     num_samples = 3000
@@ -57,7 +64,8 @@ if __name__ == "__main__":
     with torch.no_grad():
         samples = None
         while samples is None or samples.size(0) < num_samples:
-            imgs = model.forward(z=torch.randn(args.batch_size, model.latent_dim, device=device))
+            imgs = model.forward(z=torch.randn(
+                args.batch_size, model.latent_dim, device=device))
             if samples is None:
                 samples = imgs
             else:
@@ -65,6 +73,7 @@ if __name__ == "__main__":
     samples = samples[:num_samples].expand(-1, 3, -1, -1)
     samples = samples.cpu()
 
-    fid = fid_score.calculate_fid_given_images(real_imgs, samples, args.batch_size, device)
+    fid = fid_score.calculate_fid_given_images(
+        real_imgs, samples, args.batch_size, device)
     tb_writer.add_scalar('fid', fid)
     print("FID score: {:.3f}".format(fid), flush=True)

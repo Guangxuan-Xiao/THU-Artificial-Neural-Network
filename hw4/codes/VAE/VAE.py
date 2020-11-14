@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 import os
 
+
 class VAE(nn.Module):
     def __init__(self, num_channals, latent_dim):
         super(VAE, self).__init__()
@@ -9,7 +10,47 @@ class VAE(nn.Module):
         self.latent_dim = latent_dim
         # Define the architecture of VAE here
         # TODO START
+        self.encoder_cnn = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=16,
+                      kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
 
+            nn.Conv2d(in_channels=16, out_channels=32,
+                      kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+
+            nn.Conv2d(in_channels=32, out_channels=32,
+                      kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+
+            nn.Conv2d(in_channels=32, out_channels=16,
+                      kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+        )
+        self.encoder_mlp = nn.Sequential(
+            nn.Linear(16 * 8 * 8, 2 * latent_dim),
+            nn.ReLU(),
+            nn.Linear(2 * latent_dim, 2 * latent_dim)
+        )
+        self.decoder_mlp = nn.Sequential(
+            nn.Linear(latent_dim, latent_dim),
+            nn.ReLU(),
+            nn.Linear(latent_dim, 16 * 8 * 8),
+        )
+        self.decoder_cnn = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=16, out_channels=32, kernel_size=3, stride=2,
+                               padding=1, output_padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=32, out_channels=32, kernel_size=3, stride=1,
+                               padding=1, output_padding=0),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=2,
+                               padding=1, output_padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=16, out_channels=1, kernel_size=3, stride=1,
+                               padding=1, output_padding=0),
+            nn.Sigmoid(),
+        )
         # TODO END
 
     def reparameterize(self, mu, log_var):
@@ -21,9 +62,22 @@ class VAE(nn.Module):
             *   reparameterized samples (torch.FloatTensor): [batch_size, latent_dim]
         '''
         # TODO START
-		
-		return sampled_z
+        sampled_z = mu + torch.exp(log_var / 2) * torch.randn_like(log_var)
+        return sampled_z
         # TODO END
+
+    def encode(self, x):
+        x = self.encoder_cnn(x)
+        x = nn.Flatten()(x)
+        x = self.encoder_mlp(x)
+        mu, log_var = x.chunk(2, 1)
+        return mu, log_var
+
+    def decode(self, z):
+        z = self.decoder_mlp(z)
+        z = z.view(z.size(0), 16, 8, 8)
+        gen_x = self.decoder_cnn(z)
+        return gen_x
 
     def forward(self, x=None, z=None):
         '''
@@ -39,14 +93,15 @@ class VAE(nn.Module):
         '''
         if x is not None:
             # TODO START
-			
-			return recon_x, mu, log_var
+            mu, log_var = self.encode(x)
+            sampled_z = self.reparameterize(mu, log_var)
+            recon_x = self.decode(sampled_z)
+            return recon_x, mu, log_var
             # TODO END
         else:
             assert z is not None
             # TODO START
-			
-			return gen_x
+            return self.decode(z)
             # TODO END
 
     def restore(self, ckpt_dir):
@@ -54,7 +109,8 @@ class VAE(nn.Module):
             if os.path.exists(os.path.join(ckpt_dir, 'pytorch_model.bin')):
                 path = os.path.join(ckpt_dir, 'pytorch_model.bin')
             else:
-                path = os.path.join(ckpt_dir, str(max(int(name) for name in os.listdir(ckpt_dir))), 'pytorch_model.bin')
+                path = os.path.join(ckpt_dir, str(
+                    max(int(name) for name in os.listdir(ckpt_dir))), 'pytorch_model.bin')
         except:
             return None
         self.load_state_dict(torch.load(path))

@@ -9,10 +9,12 @@ from torchvision.utils import save_image
 import numpy as np
 from tqdm import tqdm
 
+
 def cycle(iterable):
     while True:
         for x in iterable:
             yield x
+
 
 class Trainer(object):
     def __init__(self, device, model, optimizer, dataset, ckpt_dir, tb_writer):
@@ -37,13 +39,20 @@ class Trainer(object):
             *   kl divergence loss (scalar): **average** kl divergence loss within a batch
         '''
         # TODO START
-		
-		return recon_loss, kl_loss
+        # print("mu: ", mu.mean())
+        # print("log_var: ", log_var.mean())
+        batch_size = mu.size(0)
+        recon_loss = nn.BCELoss(reduction="sum")(recon, target) / batch_size
+        kl_loss = (mu**2 + torch.exp(log_var) - log_var - 1).sum() / (2 * batch_size)
+        # print("recon_loss: ", recon_loss)
+        # print("kl_loss: ", kl_loss)
+        return recon_loss, kl_loss
         # TODO END
 
     def train(self, num_training_updates, logging_steps, saving_steps):
         iterator = iter(cycle(self._dataset.training_loader))
-        fixed_noise = torch.randn(32, self._model.latent_dim, device=self._device)
+        fixed_noise = torch.randn(
+            32, self._model.latent_dim, device=self._device)
         for i in tqdm(range(num_training_updates), desc='Training'):
             (inp, _) = next(iterator)
             inp = inp.to(self._device)
@@ -56,18 +65,25 @@ class Trainer(object):
             self._optimizer.step()
 
             if (i + 1) % logging_steps == 0:
-                self._tb_writer.add_scalar("reconstruction_loss", recon_loss, global_step=i)
-                self._tb_writer.add_scalar("KL_divergence", kl_div, global_step=i)
+                self._tb_writer.add_scalar(
+                    "reconstruction_loss", recon_loss, global_step=i)
+                self._tb_writer.add_scalar(
+                    "KL_divergence", kl_div, global_step=i)
                 self._tb_writer.add_scalar("loss", loss, global_step=i)
             if (i + 1) % saving_steps == 0:
                 dirname = self._model.save(self._ckpt_dir, i)
-                dev_imgs, recons, samples, eval_recon_loss, eval_kl_div = self.evaluate(fixed_noise)
-                self._tb_writer.add_scalar('dev/reconstruction_loss', eval_recon_loss, global_step=i)
-                self._tb_writer.add_scalar('dev/KL_divergence', eval_kl_div, global_step=i)
-                self._tb_writer.add_scalar('dev/loss', eval_recon_loss + eval_kl_div, global_step=i)
+                dev_imgs, recons, samples, eval_recon_loss, eval_kl_div = self.evaluate(
+                    fixed_noise)
+                self._tb_writer.add_scalar(
+                    'dev/reconstruction_loss', eval_recon_loss, global_step=i)
+                self._tb_writer.add_scalar(
+                    'dev/KL_divergence', eval_kl_div, global_step=i)
+                self._tb_writer.add_scalar(
+                    'dev/loss', eval_recon_loss + eval_kl_div, global_step=i)
                 for imgs, name in zip([dev_imgs, recons, samples], ['dev_imgs', 'reconstructions', 'samples']):
                     self._tb_writer.add_image(name, imgs, global_step=i)
-                    save_image(imgs, os.path.join(dirname, "{}.png".format(name)))
+                    save_image(imgs, os.path.join(
+                        dirname, "{}.png".format(name)))
 
     def evaluate(self, fixed_noise):
         self._model.eval()
