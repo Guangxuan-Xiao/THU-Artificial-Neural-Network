@@ -1,0 +1,69 @@
+########################
+# Filled Code
+########################
+# ..\codes\GAN\GAN.py:1
+
+# ..\codes\GAN\trainer.py:1
+
+# ..\codes\GAN\trainer.py:2
+
+# ..\codes\GAN\trainer.py:3
+
+# ..\codes\VAE\trainer.py:1
+
+# ..\codes\VAE\VAE.py:1
+
+# ..\codes\VAE\VAE.py:2
+
+# ..\codes\VAE\VAE.py:3
+
+# ..\codes\VAE\VAE.py:4
+
+
+########################
+# References
+########################
+
+########################
+# Other Modifications
+########################
+# _codes\GAN\GAN.py -> ..\codes\GAN\GAN.py
+# 24 -     def __init__(self, num_channels, hidden_dim, latent_dim):
+# 24 ?                                                ------------
+# 24 +     def __init__(self, num_channels, latent_dim, hidden_dim):
+# 24 ?                                      ++++++++++++
+# _codes\GAN\pytorch_fid\fid_score.py -> ..\codes\GAN\pytorch_fid\fid_score.py
+# 101 -                                      drop_last=False, num_workers=cpu_count())
+# 101 ?                                                                   ^^^^^^^^^^^
+# 101 +                                      drop_last=False, num_workers=1)
+# 101 ?                                                                   ^
+# 151 -                                      drop_last=False, num_workers=cpu_count())
+# 151 ?                                                                   ^^^^^^^^^^^
+# 151 +                                      drop_last=False, num_workers=1)
+# 151 ?                                                                   ^
+# _codes\GAN\main.py -> ..\codes\GAN\main.py
+# 64 -             imgs = netG.forward(torch.randn(args.batch_size, netG.latent_dim, 1, 1))
+# 64 +             imgs = netG.forward(torch.randn(args.batch_size, netG.latent_dim, 1, 1, device=device))
+# 64 ?                                                                                   +++++++++++++++
+# _codes\GAN\trainer.py -> ..\codes\GAN\trainer.py
+# 94 -             fake_imgs = self._netG(torch.randn(real_imgs.size(0), self._netG.latent_dim, 1, 1))
+# 94 +             fake_imgs = self._netG(torch.randn(real_imgs.size(0), self._netG.latent_dim, 1, 1, device=self._device))
+# 94 ?                                                                                              +++++++++++++++++++++
+# _codes\VAE\pytorch_fid\fid_score.py -> ..\codes\VAE\pytorch_fid\fid_score.py
+# 101 -                                      drop_last=False, num_workers=cpu_count())
+# 101 ?                                                                   ^^^^^^^^^^^
+# 101 +                                      drop_last=False, num_workers=1)
+# 101 ?                                                                   ^
+# 151 -                                      drop_last=False, num_workers=cpu_count())
+# 151 ?                                                                   ^^^^^^^^^^^
+# 151 +                                      drop_last=False, num_workers=1)
+# 151 ?                                                                   ^
+# _codes\VAE\main.py -> ..\codes\VAE\main.py
+# 60 -             imgs = model.forward(z=torch.randn(args.batch_size, model.latent_dim))
+# 60 +             imgs = model.forward(z=torch.randn(args.batch_size, model.latent_dim, device=device))
+# 60 ?                                                                                 +++++++++++++++
+# _codes\VAE\trainer.py -> ..\codes\VAE\trainer.py
+# 46 -         fixed_noise = torch.randn(32, self._model.latent_dim)
+# 46 +         fixed_noise = torch.randn(32, self._model.latent_dim, device=self._device)
+# 46 ?                                                             +++++++++++++++++++++
+
