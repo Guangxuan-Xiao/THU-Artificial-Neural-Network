@@ -1,0 +1,9 @@
+Namespace(batch_size=128, cell='RNN', data_dir='./data', decode_strategy='top-p', embed_units=300, layer_norm=False, layers=2, learning_rate=0.001, max_probability=0.8, name='RNN_l2_128', num_epochs=30, residual=False, temperature=0.8, test='RNN_l2_128', train_dir='./train', units=128, wordvec_dir='./wordvec')
+INFO: local path: ./data
+INFO: processor type: Default
+INFO: local path: ./wordvec
+INFO: processor type: Default
+Loading model from ./train/checkpoint_RNN_l2_128.pth.tar
+test set restart, 39 batches and 8 left
+        test_set, perplexity 18.88, forward BLEU 0.437, backward BLEU 0.342, harmonic BLEU 0.384
+        test_set, write inference results to output.txt

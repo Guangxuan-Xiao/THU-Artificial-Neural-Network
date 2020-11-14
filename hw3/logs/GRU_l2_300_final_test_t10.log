@@ -1,0 +1,19 @@
+Namespace(batch_size=128, cell='GRU', data_dir='./data', decode_strategy='random', embed_units=300, layer_norm=True, layers=2, learning_rate=0.001, max_probability=1, name='GRU_l2_300_final', num_epochs=30, residual=True, temperature=1.0, test='GRU_l2_300_final', train_dir='./train', units=300, wordvec_dir='./wordvec')
+INFO: local path: ./data
+INFO: processor type: Default
+INFO: local path: ./wordvec
+INFO: processor type: Default
+Loading model from ./train/checkpoint_GRU_l2_300_final.pth.tar
+test set restart, 39 batches and 8 left
+        test_set, perplexity 16.98, forward BLEU 0.306, backward BLEU 0.325, harmonic BLEU 0.316
+        test_set, write inference results to output.txt
+A woman walking down a wooden with a vehicle of various activities .
+A family of pigeons inside and sitting on either side of a lake with the ocean under the top of the hole .
+People walk past tall buildings in the snow in the forest .
+A kitchen with pretty wood cabinets , nice sink , and counter .
+Three giraffes are standing in a field of dirt past tall grass .
+A street corner mounted going to to a brick building .
+A bathroom with a toilet , urinals and shower nearby .
+Two costumed watch is parked in a car on a bicycle .
+A cow is laying its head through the slats of a variety of flowers .
+A public bathroom stall with a toilet and under construction with control bathtub .

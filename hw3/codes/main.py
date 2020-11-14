@@ -1,3 +1,5 @@
+from model import RNN
+import cotk
 import numpy as np
 import time
 import random
@@ -6,12 +8,11 @@ import torch
 from torch import optim
 import torch.nn.functional as F
 import os
+import matplotlib.pyplot as plt
+from tensorboardX import SummaryWriter
 
 random.seed(1229)
 
-import cotk
-
-from model import RNN
 
 parser = argparse.ArgumentParser()
 
@@ -19,6 +20,9 @@ parser.add_argument('--name',
                     type=str,
                     default="run",
                     help='Experiment name. Default: run')
+parser.add_argument('--cell',
+                    type=str,
+                    default="GRU")
 parser.add_argument('--num_epochs',
                     type=int,
                     default=20,
@@ -64,10 +68,9 @@ parser.add_argument(
 parser.add_argument(
     '--decode_strategy',
     type=str,
-    choices=["random", "top-p"],
+    choices=["random", "top-p", "top-1"],
     default="random",
-    help=
-    'The strategy for decoding. Can be "random" or "top-p". Default: random')
+    help='The strategy for decoding. Can be "random" or "top-p". Default: random')
 parser.add_argument('--temperature',
                     type=float,
                     default=1,
@@ -76,7 +79,21 @@ parser.add_argument('--max_probability',
                     type=float,
                     default=1,
                     help='The p for top-p decoding. Default: 1')
+parser.add_argument("--layer_norm", action="store_true", default=False)
+parser.add_argument("--residual", action="store_true", default=False)
 args = parser.parse_args()
+if not args.test:
+    writer = SummaryWriter("../runs/%s" % args.name)
+
+
+def plot(epochs, train, test, label, file="plot.png"):
+    plt.figure()
+    plt.plot(epochs, train, label="Training")
+    plt.plot(epochs, test, label="Validating")
+    plt.xlabel("Epochs")
+    plt.ylabel(label)
+    plt.legend()
+    plt.savefig("../plots/" + file)
 
 
 def fast_evaluate(model, dataloader, datakey, device):
@@ -170,8 +187,7 @@ if __name__ == '__main__':
             dataloader.frequent_vocab_size,
             torch.tensor(wordvec.load_matrix(args.embed_units,
                                              dataloader.frequent_vocab_list),
-                         dtype=torch.float,
-                         device=device), dataloader)
+                         dtype=torch.float, device=device), dataloader, cell_type=args.cell, layer_norm=args.layer_norm, residual=args.residual)
         model.to(device)
 
         optimizer = optim.Adam(model.parameters(),
@@ -179,7 +195,9 @@ if __name__ == '__main__':
                                weight_decay=0)
         best_val_ppl = float("inf")
         best_epoch = -1
-
+        train_losses = []
+        val_losses = []
+        epochs = []
         for epoch in range(1, args.num_epochs + 1):
             start_time = time.time()
 
@@ -196,7 +214,7 @@ if __name__ == '__main__':
 
                 if (batch + 1) % 100 == 0:
                     print("Epoch %d Batch %d, train loss %f" %
-                          (epoch, batch, np.mean(losses[-100:])))
+                          (epoch, batch + 1, np.mean(losses[-100:])))
 
             train_loss = np.mean(losses)
 
@@ -210,7 +228,13 @@ if __name__ == '__main__':
                                      'checkpoint_%s.pth.tar' % args.name),
                         'wb') as fout:
                     torch.save(model, fout)
+            train_losses.append(train_loss)
+            val_losses.append(val_loss)
 
+            writer.add_scalars(
+                "Loss", {"Train": train_loss, "Validation": val_loss}, epoch)
+            writer.flush()
+            epochs.append(epoch+1)
             samples = show_example(model, dataloader, 5, device)
 
             epoch_time = time.time() - start_time
@@ -224,6 +248,8 @@ if __name__ == '__main__':
 
             for example_id, sent in enumerate(samples):
                 print("Example %d: " % example_id + " ".join(sent))
+        plot(epochs, train=train_losses, test=val_losses,
+             label="Loss", file="%s_loss.png" % args.name)
 
     else:
         model_path = os.path.join(args.train_dir,
@@ -236,7 +262,7 @@ if __name__ == '__main__':
 
         _, ppl = fast_evaluate(model, dataloader, "test", device)
         result = evaluate(model, dataloader, "test", device)
-        with open('output.txt', 'w') as fout:
+        with open('../outputs/%s_output.txt' % args.name, 'w') as fout:
             for sent in result["gen"]:
                 fout.write(" ".join(sent) + "\n")
 
@@ -245,3 +271,7 @@ if __name__ == '__main__':
             %
             (ppl, result["fw-bleu"], result["bw-bleu"], result["fw-bw-bleu"]))
         print("        test_set, write inference results to output.txt")
+        for sent in result["gen"][:10]:
+            print(" ".join(sent))
+if not args.test:
+    writer.close()
