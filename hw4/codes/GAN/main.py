@@ -14,6 +14,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--do_train', action='store_true')
     parser.add_argument('--no_cuda', action='store_true')
+    parser.add_argument('--no_cnn', action='store_true')
     parser.add_argument('--latent_dim', default=100, type=int)
     parser.add_argument('--generator_hidden_dim', default=100, type=int)
     parser.add_argument('--discriminator_hidden_dim', default=16, type=int)
@@ -31,8 +32,8 @@ if __name__ == "__main__":
     parser.add_argument('--log_dir', default='./runs', type=str)
     args = parser.parse_args()
 
-    config = 'z-{}_batch-{}_num-train-steps-{}'.format(
-        args.latent_dim, args.batch_size, args.num_training_steps)
+    config = 'z-{}_batch-{}_num-train-steps-{}-{}'.format(
+        args.latent_dim, args.batch_size, args.num_training_steps, args.learning_rate, args.no_cnn)
     args.ckpt_dir = os.path.join(args.ckpt_dir, config)
     args.log_dir = os.path.join(args.log_dir, config)
     device = torch.device('cuda' if torch.cuda.is_available()

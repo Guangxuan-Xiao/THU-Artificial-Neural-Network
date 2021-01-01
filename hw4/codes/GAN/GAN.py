@@ -33,7 +33,21 @@ class Generator(nn.Module):
 
         # TODO START
         self.decoder = nn.Sequential(
-
+            nn.ConvTranspose2d(in_channels=latent_dim,
+                               out_channels=4 * hidden_dim, kernel_size=4, stride=1, padding=0),
+            nn.BatchNorm2d(4 * hidden_dim),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=4 * hidden_dim,
+                               out_channels=2 * hidden_dim, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(2 * hidden_dim),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=2 * hidden_dim,
+                               out_channels=hidden_dim, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(hidden_dim),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=hidden_dim,
+                               out_channels=1, kernel_size=4, stride=2, padding=1),
+            nn.Tanh(),
         )
         # TODO END
 

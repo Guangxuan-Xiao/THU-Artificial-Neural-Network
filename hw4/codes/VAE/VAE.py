@@ -4,12 +4,13 @@ import os
 
 
 class VAE(nn.Module):
-    def __init__(self, num_channals, latent_dim):
+    def __init__(self, num_channals, latent_dim, no_cnn=False):
         super(VAE, self).__init__()
         self.num_channals = num_channals
         self.latent_dim = latent_dim
         # Define the architecture of VAE here
         # TODO START
+        self.no_cnn = no_cnn
         self.encoder_cnn = nn.Sequential(
             nn.Conv2d(in_channels=1, out_channels=16,
                       kernel_size=3, stride=1, padding=1),
@@ -31,12 +32,22 @@ class VAE(nn.Module):
             nn.Linear(16 * 8 * 8, 2 * latent_dim),
             nn.ReLU(),
             nn.Linear(2 * latent_dim, 2 * latent_dim)
+        ) if not self.no_cnn else nn.Sequential(
+            nn.Linear(1 * 32 * 32, 2 * latent_dim),
+            nn.ReLU(),
+            nn.Linear(2 * latent_dim, 2 * latent_dim)
         )
         self.decoder_mlp = nn.Sequential(
             nn.Linear(latent_dim, latent_dim),
             nn.ReLU(),
             nn.Linear(latent_dim, 16 * 8 * 8),
+        ) if not self.no_cnn else nn.Sequential(
+            nn.Linear(latent_dim, latent_dim),
+            nn.ReLU(),
+            nn.Linear(latent_dim, 1 * 32 * 32),
+            nn.Sigmoid(),
         )
+
         self.decoder_cnn = nn.Sequential(
             nn.ConvTranspose2d(in_channels=16, out_channels=32, kernel_size=3, stride=2,
                                padding=1, output_padding=1),
@@ -67,7 +78,8 @@ class VAE(nn.Module):
         # TODO END
 
     def encode(self, x):
-        x = self.encoder_cnn(x)
+        if not self.no_cnn:
+            x = self.encoder_cnn(x)
         x = nn.Flatten()(x)
         x = self.encoder_mlp(x)
         mu, log_var = x.chunk(2, 1)
@@ -75,8 +87,11 @@ class VAE(nn.Module):
 
     def decode(self, z):
         z = self.decoder_mlp(z)
-        z = z.view(z.size(0), 16, 8, 8)
-        gen_x = self.decoder_cnn(z)
+        if not self.no_cnn:
+            z = z.view(z.size(0), 16, 8, 8)
+            gen_x = self.decoder_cnn(z)
+        else:
+            gen_x = z.view(z.size(0), 1, 32, 32)
         return gen_x
 
     def forward(self, x=None, z=None):

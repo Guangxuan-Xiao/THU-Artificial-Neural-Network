@@ -1,23 +1,126 @@
 ########################
+# Additional Files
+########################
+# log
+# __pycache__
+# inception
+# train_no_cnn.sh
+# runs
+# train.sh
+# GAN.pyc
+# results
+# data
+# log.log
+
+########################
 # Filled Code
 ########################
-# ..\codes\GAN\GAN.py:1
+# ../codes/VAE/VAE.py:1
+        self.no_cnn = no_cnn
+        self.encoder_cnn = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=16,
+                      kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=16, out_channels=32,
+                      kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
 
-# ..\codes\GAN\trainer.py:1
+            nn.Conv2d(in_channels=32, out_channels=32,
+                      kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
 
-# ..\codes\GAN\trainer.py:2
+            nn.Conv2d(in_channels=32, out_channels=16,
+                      kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+        )
+        self.encoder_mlp = nn.Sequential(
+            nn.Linear(16 * 8 * 8, 2 * latent_dim),
+            nn.ReLU(),
+            nn.Linear(2 * latent_dim, 2 * latent_dim)
+        ) if not self.no_cnn else nn.Sequential(
+            nn.Linear(1 * 32 * 32, 2 * latent_dim),
+            nn.ReLU(),
+            nn.Linear(2 * latent_dim, 2 * latent_dim)
+        )
+        self.decoder_mlp = nn.Sequential(
+            nn.Linear(latent_dim, latent_dim),
+            nn.ReLU(),
+            nn.Linear(latent_dim, 16 * 8 * 8),
+        ) if not self.no_cnn else nn.Sequential(
+            nn.Linear(latent_dim, latent_dim),
+            nn.ReLU(),
+            nn.Linear(latent_dim, 1 * 32 * 32),
+            nn.Sigmoid(),
+        )
 
-# ..\codes\GAN\trainer.py:3
+        self.decoder_cnn = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=16, out_channels=32, kernel_size=3, stride=2,
+                               padding=1, output_padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=32, out_channels=32, kernel_size=3, stride=1,
+                               padding=1, output_padding=0),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=2,
+                               padding=1, output_padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=16, out_channels=1, kernel_size=3, stride=1,
+                               padding=1, output_padding=0),
+            nn.Sigmoid(),
+        )
 
-# ..\codes\VAE\trainer.py:1
+# ../codes/VAE/VAE.py:2
+        sampled_z = mu + torch.exp(log_var / 2) * torch.randn_like(log_var)
 
-# ..\codes\VAE\VAE.py:1
+# ../codes/VAE/VAE.py:3
+            mu, log_var = self.encode(x)
+            sampled_z = self.reparameterize(mu, log_var)
+            recon_x = self.decode(sampled_z)
 
-# ..\codes\VAE\VAE.py:2
+# ../codes/VAE/VAE.py:4
+            return self.decode(z)
 
-# ..\codes\VAE\VAE.py:3
+# ../codes/VAE/trainer.py:1
+        # print("mu: ", mu.mean())
+        # print("log_var: ", log_var.mean())
+        batch_size = mu.size(0)
+        recon_loss = nn.BCELoss(reduction="sum")(recon, target) / batch_size
+        kl_loss = (mu**2 + torch.exp(log_var) - log_var - 1).sum() / (2 * batch_size)
+        # print("recon_loss: ", recon_loss)
+        # print("kl_loss: ", kl_loss)
 
-# ..\codes\VAE\VAE.py:4
+# ../codes/GAN/trainer.py:1
+        D_x = self._netD(real_imgs)
+        loss_D_real = BCE_criterion(D_x, torch.ones_like(D_x))
+        D_x = D_x.mean()
+        loss_D_real.backward()
+
+# ../codes/GAN/trainer.py:2
+        D_G_z1 = self._netD(fake_imgs)
+        loss_D_fake = BCE_criterion(D_G_z1, torch.zeros_like(D_G_z1))
+        D_G_z1 = D_G_z1.mean()
+        loss_D_fake.backward(retain_graph=True)
+
+# ../codes/GAN/trainer.py:3
+        D_G_z2 = self._netD(fake_imgs)
+        loss_G = BCE_criterion(D_G_z2, torch.ones_like(D_G_z2))
+        D_G_z2 = D_G_z2.mean()
+
+# ../codes/GAN/GAN.py:1
+            nn.ConvTranspose2d(in_channels=latent_dim,
+                               out_channels=4 * hidden_dim, kernel_size=4, stride=1, padding=0),
+            nn.BatchNorm2d(4 * hidden_dim),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=4 * hidden_dim,
+                               out_channels=2 * hidden_dim, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(2 * hidden_dim),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=2 * hidden_dim,
+                               out_channels=hidden_dim, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(hidden_dim),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=hidden_dim,
+                               out_channels=1, kernel_size=4, stride=2, padding=1),
+            nn.Tanh(),
 
 
 ########################
@@ -27,43 +130,213 @@
 ########################
 # Other Modifications
 ########################
-# _codes\GAN\GAN.py -> ..\codes\GAN\GAN.py
-# 24 -     def __init__(self, num_channels, hidden_dim, latent_dim):
-# 24 ?                                                ------------
-# 24 +     def __init__(self, num_channels, latent_dim, hidden_dim):
-# 24 ?                                      ++++++++++++
-# _codes\GAN\pytorch_fid\fid_score.py -> ..\codes\GAN\pytorch_fid\fid_score.py
-# 101 -                                      drop_last=False, num_workers=cpu_count())
-# 101 ?                                                                   ^^^^^^^^^^^
-# 101 +                                      drop_last=False, num_workers=1)
-# 101 ?                                                                   ^
-# 151 -                                      drop_last=False, num_workers=cpu_count())
-# 151 ?                                                                   ^^^^^^^^^^^
-# 151 +                                      drop_last=False, num_workers=1)
-# 151 ?                                                                   ^
-# _codes\GAN\main.py -> ..\codes\GAN\main.py
-# 64 -             imgs = netG.forward(torch.randn(args.batch_size, netG.latent_dim, 1, 1))
-# 64 +             imgs = netG.forward(torch.randn(args.batch_size, netG.latent_dim, 1, 1, device=device))
-# 64 ?                                                                                   +++++++++++++++
-# _codes\GAN\trainer.py -> ..\codes\GAN\trainer.py
-# 94 -             fake_imgs = self._netG(torch.randn(real_imgs.size(0), self._netG.latent_dim, 1, 1))
-# 94 +             fake_imgs = self._netG(torch.randn(real_imgs.size(0), self._netG.latent_dim, 1, 1, device=self._device))
-# 94 ?                                                                                              +++++++++++++++++++++
-# _codes\VAE\pytorch_fid\fid_score.py -> ..\codes\VAE\pytorch_fid\fid_score.py
-# 101 -                                      drop_last=False, num_workers=cpu_count())
-# 101 ?                                                                   ^^^^^^^^^^^
-# 101 +                                      drop_last=False, num_workers=1)
-# 101 ?                                                                   ^
-# 151 -                                      drop_last=False, num_workers=cpu_count())
-# 151 ?                                                                   ^^^^^^^^^^^
-# 151 +                                      drop_last=False, num_workers=1)
-# 151 ?                                                                   ^
-# _codes\VAE\main.py -> ..\codes\VAE\main.py
-# 60 -             imgs = model.forward(z=torch.randn(args.batch_size, model.latent_dim))
-# 60 +             imgs = model.forward(z=torch.randn(args.batch_size, model.latent_dim, device=device))
-# 60 ?                                                                                 +++++++++++++++
-# _codes\VAE\trainer.py -> ..\codes\VAE\trainer.py
-# 46 -         fixed_noise = torch.randn(32, self._model.latent_dim)
-# 46 +         fixed_noise = torch.randn(32, self._model.latent_dim, device=self._device)
-# 46 ?                                                             +++++++++++++++++++++
+# _codes/VAE/VAE.py -> ../codes/VAE/VAE.py
+# 5 +
+# 6 -     def __init__(self, num_channals, latent_dim):
+# 7 +     def __init__(self, num_channals, latent_dim, no_cnn=False):
+# 7 ?                                                ++++++++++++++
+# 79 +
+# 80 +     def encode(self, x):
+# 81 +         if not self.no_cnn:
+# 82 +             x = self.encoder_cnn(x)
+# 83 +         x = nn.Flatten()(x)
+# 84 +         x = self.encoder_mlp(x)
+# 85 +         mu, log_var = x.chunk(2, 1)
+# 86 +         return mu, log_var
+# 87 +
+# 88 +     def decode(self, z):
+# 89 +         z = self.decoder_mlp(z)
+# 90 +         if not self.no_cnn:
+# 91 +             z = z.view(z.size(0), 16, 8, 8)
+# 92 +             gen_x = self.decoder_cnn(z)
+# 93 +         else:
+# 94 +             gen_x = z.view(z.size(0), 1, 32, 32)
+# 95 +         return gen_x
+# 127 +                 path = os.path.join(ckpt_dir, str(
+# 57 -                 path = os.path.join(ckpt_dir, str(max(int(name) for name in os.listdir(ckpt_dir))), 'pytorch_model.bin')
+# 57 ?                 ---- - ---------------------- ^^^^
+# 128 +                     max(int(name) for name in os.listdir(ckpt_dir))), 'pytorch_model.bin')
+# 128 ?                    ^
+# _codes/VAE/trainer.py -> ../codes/VAE/trainer.py
+# 12 +
+# 17 +
+# 54 +         fixed_noise = torch.randn(
+# 46 -         fixed_noise = torch.randn(32, self._model.latent_dim, device=self._device)
+# 46 ?         ----------- - ^^^^^^^^^^^^
+# 55 +             32, self._model.latent_dim, device=self._device)
+# 55 ?           ^^
+# 68 +                 self._tb_writer.add_scalar(
+# 59 -                 self._tb_writer.add_scalar("reconstruction_loss", recon_loss, global_step=i)
+# 59 ?                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# 69 +                     "reconstruction_loss", recon_loss, global_step=i)
+# 69 ?                 ^^^^
+# 70 +                 self._tb_writer.add_scalar(
+# 60 -                 self._tb_writer.add_scalar("KL_divergence", kl_div, global_step=i)
+# 60 ?                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# 71 +                     "KL_divergence", kl_div, global_step=i)
+# 71 ?                 ^^^^
+# 64 -                 dev_imgs, recons, samples, eval_recon_loss, eval_kl_div = self.evaluate(fixed_noise)
+# 64 ?                                                                                         ------------
+# 75 +                 dev_imgs, recons, samples, eval_recon_loss, eval_kl_div = self.evaluate(
+# 76 +                     fixed_noise)
+# 77 +                 self._tb_writer.add_scalar(
+# 65 -                 self._tb_writer.add_scalar('dev/reconstruction_loss', eval_recon_loss, global_step=i)
+# 65 ?                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# 78 +                     'dev/reconstruction_loss', eval_recon_loss, global_step=i)
+# 78 ?                 ^^^^
+# 79 +                 self._tb_writer.add_scalar(
+# 66 -                 self._tb_writer.add_scalar('dev/KL_divergence', eval_kl_div, global_step=i)
+# 66 ?                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# 80 +                     'dev/KL_divergence', eval_kl_div, global_step=i)
+# 80 ?                 ^^^^
+# 81 +                 self._tb_writer.add_scalar(
+# 67 -                 self._tb_writer.add_scalar('dev/loss', eval_recon_loss + eval_kl_div, global_step=i)
+# 67 ?                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# 82 +                     'dev/loss', eval_recon_loss + eval_kl_div, global_step=i)
+# 82 ?                 ^^^^
+# 85 +                     save_image(imgs, os.path.join(
+# 70 -                     save_image(imgs, os.path.join(dirname, "{}.png".format(name)))
+# 70 ?                     ---------------- ^^^^^^^^^^^^^
+# 86 +                         dirname, "{}.png".format(name)))
+# 86 ?                      ^^^
+# _codes/VAE/main.py -> ../codes/VAE/main.py
+# 17 +     parser.add_argument('--no_cnn', action='store_true')
+# 24 -     parser.add_argument('--data_dir', default='data', type=str, help='The path of the data directory')
+# 24 ?                                                                ---------------------------------------
+# 25 +     parser.add_argument('--data_dir', default='data', type=str,
+# 25 -     parser.add_argument('--ckpt_dir', default='results', type=str, help='The path of the checkpoint directory')
+# 26 +                         help='The path of the data directory')
+# 27 +     parser.add_argument('--ckpt_dir', default='results',
+# 28 +                         type=str, help='The path of the checkpoint directory')
+# 28 -     config = 'z-{}_batch-{}_num-train-steps-{}'.format(args.latent_dim, args.batch_size, args.num_training_steps)
+# 31 +     config = 'z-{}_batch-{}_num-train-steps-{}-{}'.format(
+# 32 +         args.latent_dim, args.batch_size, args.num_training_steps, args.no_cnn)
+# 32 -     device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
+# 32 ?                                                              ---------------------------------
+# 36 +     device = torch.device('cuda' if torch.cuda.is_available()
+# 37 +                           and not args.no_cuda else 'cpu')
+# 35 -     model = VAE(1, args.latent_dim).to(device)
+# 40 +     model = VAE(1, args.latent_dim, args.no_cnn).to(device)
+# 40 ?                                   +++++++++++++
+# 40 -         trainer = Trainer(device, model, optimizer, dataset, args.ckpt_dir, tb_writer)
+# 41 -         trainer.train(args.num_training_steps, args.logging_steps, args.saving_steps)
+# 45 +         trainer = Trainer(device, model, optimizer,
+# 46 +                           dataset, args.ckpt_dir, tb_writer)
+# 47 +         trainer.train(args.num_training_steps,
+# 48 +                       args.logging_steps, args.saving_steps)
+# 43 -     restore_ckpt_path = os.path.join(args.ckpt_dir, str(max(int(step) for step in os.listdir(args.ckpt_dir))))
+# 50 +     restore_ckpt_path = os.path.join(args.ckpt_dir, str(
+# 51 +         max(int(step) for step in os.listdir(args.ckpt_dir))))
+# 68 +             imgs = model.forward(z=torch.randn(
+# 60 -             imgs = model.forward(z=torch.randn(args.batch_size, model.latent_dim, device=device))
+# 60 ?             ---- - ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# 69 +                 args.batch_size, model.latent_dim, device=device))
+# 69 ?               ^^
+# 68 -     fid = fid_score.calculate_fid_given_images(real_imgs, samples, args.batch_size, device)
+# 77 +     fid = fid_score.calculate_fid_given_images(
+# 78 +         real_imgs, samples, args.batch_size, device)
+# _codes/GAN/trainer.py -> ../codes/GAN/trainer.py
+# 12 +
+# 17 +
+# 61 -
+# 65 +
+# 70 -
+# 74 +
+# 78 -
+# 83 +
+# 91 +         fixed_noise = torch.randn(
+# 86 -         fixed_noise = torch.randn(32, self._netG.latent_dim, 1, 1, device=self._device)
+# 86 ?         ----------- - ^^^^^^^^^^^^
+# 92 +             32, self._netG.latent_dim, 1, 1, device=self._device)
+# 92 ?           ^^
+# 94 -             fake_imgs = self._netG(torch.randn(real_imgs.size(0), self._netG.latent_dim, 1, 1, device=self._device))
+# 100 +             fake_imgs = self._netG(torch.randn(real_imgs.size(
+# 101 +                 0), self._netG.latent_dim, 1, 1, device=self._device))
+# 95 -             errD, errG, D_x, D_G_z1, D_G_z2 = self.train_step(real_imgs, fake_imgs, criterion)
+# 95 ?                                                               --------------------------------
+# 102 +             errD, errG, D_x, D_G_z1, D_G_z2 = self.train_step(
+# 96 -
+# 103 +                 real_imgs, fake_imgs, criterion)
+# 104 +
+# 106 +                 self._tb_writer.add_scalar(
+# 98 -                 self._tb_writer.add_scalar("discriminator_loss", errD, global_step=i)
+# 98 ?                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# 107 +                     "discriminator_loss", errD, global_step=i)
+# 107 ?                 ^^^^
+# 108 +                 self._tb_writer.add_scalar(
+# 99 -                 self._tb_writer.add_scalar("generator_loss", errG, global_step=i)
+# 99 ?                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# 109 +                     "generator_loss", errG, global_step=i)
+# 109 ?                 ^^^^
+# _codes/GAN/main.py -> ../codes/GAN/main.py
+# 17 +     parser.add_argument('--no_cnn', action='store_true')
+# 18 -     parser.add_argument('--generator_hidden_dim', default=16, type=int)
+# 18 ?                                                            ^
+# 19 +     parser.add_argument('--generator_hidden_dim', default=100, type=int)
+# 19 ?                                                            ^^
+# 25 -     parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
+# 25 ?                                                            ------------------------------------
+# 26 +     parser.add_argument('--beta1', type=float, default=0.5,
+# 26 -     parser.add_argument('--data_dir', default='../data', type=str, help='The path of the data directory')
+# 27 -     parser.add_argument('--ckpt_dir', default='results', type=str, help='The path of the checkpoint directory')
+# 27 +                         help='beta1 for adam. default=0.5')
+# 28 +     parser.add_argument('--data_dir', default='../data',
+# 29 +                         type=str, help='The path of the data directory')
+# 30 +     parser.add_argument('--ckpt_dir', default='results',
+# 31 +                         type=str, help='The path of the checkpoint directory')
+# 31 -     config = 'z-{}_batch-{}_num-train-steps-{}'.format(args.latent_dim, args.batch_size, args.num_training_steps)
+# 35 +     config = 'z-{}_batch-{}_num-train-steps-{}-{}'.format(
+# 36 +         args.latent_dim, args.batch_size, args.num_training_steps, args.learning_rate, args.no_cnn)
+# 34 -     device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
+# 34 ?                                                              ---------------------------------
+# 39 +     device = torch.device('cuda' if torch.cuda.is_available()
+# 40 +                           and not args.no_cuda else 'cpu')
+# 43 +     netG = GAN.get_generator(
+# 37 -     netG = GAN.get_generator(1, args.latent_dim, args.generator_hidden_dim, device)
+# 37 ?     ---- - ^^^^^^^^^^^^^^^^^^
+# 44 +         1, args.latent_dim, args.generator_hidden_dim, device)
+# 44 ?       ^^
+# 42 -         optimG = optim.Adam(netG.parameters(), lr=args.learning_rate, betas=(args.beta1, 0.999))
+# 43 -         optimD = optim.Adam(netD.parameters(), lr=args.learning_rate, betas=(args.beta1, 0.999))
+# 49 +         optimG = optim.Adam(netG.parameters(),
+# 50 +                             lr=args.learning_rate, betas=(args.beta1, 0.999))
+# 51 +         optimD = optim.Adam(netD.parameters(),
+# 52 +                             lr=args.learning_rate, betas=(args.beta1, 0.999))
+# 44 -         trainer = Trainer(device, netG, netD, optimG, optimD, dataset, args.ckpt_dir, tb_writer)
+# 44 ?                                                              -----------------------------------
+# 53 +         trainer = Trainer(device, netG, netD, optimG, optimD,
+# 45 -         trainer.train(args.num_training_steps, args.logging_steps, args.saving_steps)
+# 54 +                           dataset, args.ckpt_dir, tb_writer)
+# 55 +         trainer.train(args.num_training_steps,
+# 56 +                       args.logging_steps, args.saving_steps)
+# 47 -     restore_ckpt_path = os.path.join(args.ckpt_dir, str(max(int(step) for step in os.listdir(args.ckpt_dir))))
+# 58 +     restore_ckpt_path = os.path.join(args.ckpt_dir, str(
+# 59 +         max(int(step) for step in os.listdir(args.ckpt_dir))))
+# 76 +             imgs = netG.forward(torch.randn(
+# 64 -             imgs = netG.forward(torch.randn(args.batch_size, netG.latent_dim, 1, 1, device=device))
+# 64 ?             ---- - ^^^^^^^^^^^^^^^^^^^^^^^^^
+# 77 +                 args.batch_size, netG.latent_dim, 1, 1, device=device))
+# 77 ?               ^^
+# 72 -     fid = fid_score.calculate_fid_given_images(real_imgs, samples, args.batch_size, device)
+# 85 +     fid = fid_score.calculate_fid_given_images(
+# 86 +         real_imgs, samples, args.batch_size, device)
+# 74 -     print("FID score: {:.3f}".format(fid), flush=True)
+# 88 +     print("FID score: {:.3f}".format(fid), flush=True)
+# 88 ?                                                       +
+# _codes/GAN/GAN.py -> ../codes/GAN/GAN.py
+# 4 +
+# 14 +
+# 20 +
+# 25 +
+# 67 +                 path = os.path.join(ckpt_dir, str(
+# 49 -                 path = os.path.join(ckpt_dir, str(max(int(name) for name in os.listdir(ckpt_dir))), 'generator.bin')
+# 49 ?                 ---- - ---------------------- ^^^^
+# 68 +                     max(int(name) for name in os.listdir(ckpt_dir))), 'generator.bin')
+# 68 ?                    ^
+# 79 +
+# 111 +                 path = os.path.join(ckpt_dir, str(
+# 91 -                 path = os.path.join(ckpt_dir, str(max(int(name) for name in os.listdir(ckpt_dir))), 'discriminator.bin')
+# 91 ?                 ---- - ---------------------- ^^^^
+# 112 +                     max(int(name) for name in os.listdir(ckpt_dir))), 'discriminator.bin')
+# 112 ?                    ^
 

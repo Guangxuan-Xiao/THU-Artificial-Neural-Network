@@ -14,6 +14,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--do_train', action='store_true')
     parser.add_argument('--no_cuda', action='store_true')
+    parser.add_argument('--no_cnn', action='store_true')
     parser.add_argument('--latent_dim', default=64, type=int)
     parser.add_argument('--batch_size', default=32, type=int)
     parser.add_argument('--num_training_steps', default=25000, type=int)
@@ -27,8 +28,8 @@ if __name__ == "__main__":
                         type=str, help='The path of the checkpoint directory')
     args = parser.parse_args()
 
-    config = 'z-{}_batch-{}_num-train-steps-{}'.format(
-        args.latent_dim, args.batch_size, args.num_training_steps)
+    config = 'z-{}_batch-{}_num-train-steps-{}-{}'.format(
+        args.latent_dim, args.batch_size, args.num_training_steps, args.no_cnn)
     args.ckpt_dir = os.path.join(args.ckpt_dir, config)
     args.log_dir = os.path.join(args.log_dir, config)
 
@@ -36,7 +37,7 @@ if __name__ == "__main__":
                           and not args.no_cuda else 'cpu')
 
     dataset = Dataset(args.batch_size, args.data_dir)
-    model = VAE(1, args.latent_dim).to(device)
+    model = VAE(1, args.latent_dim, args.no_cnn).to(device)
     tb_writer = SummaryWriter(args.log_dir)
 
     if args.do_train:

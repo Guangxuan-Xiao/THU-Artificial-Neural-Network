@@ -5,15 +5,15 @@ INFO: local path: ./wordvec
 INFO: processor type: Default
 Loading model from ./train/checkpoint_GRU_l2_300_final.pth.tar
 test set restart, 39 batches and 8 left
-        test_set, perplexity 16.98, forward BLEU 0.457, backward BLEU 0.346, harmonic BLEU 0.394
+        test_set, perplexity 16.98, forward BLEU 0.452, backward BLEU 0.336, harmonic BLEU 0.385
         test_set, write inference results to output.txt
-A group of people walk around some sheep and one giraffe .
-A man in a recliner is sitting on a bench reading .
-A man on a motorcycle parked next to a man on a motorcycle .
-A large white bird standing on top of a black and white floor .
-A man sitting on top of a toilet seat down and some food .
-A couple of animals standing on a lake next to a forest .
-A fire hydrant sitting on a curb near a stone building .
-A living room with a mirror , coffee maker and a plate with nuts on it .
-A small car with a bicycle backed up to it ' s head .
-A giraffe running its neck and eating out of a stand .
+There is a bike with a dog on it ' s ears .
+A white bus sitting on top of an airport tarmac .
+A bowl of coffee and a black cat sitting on a desk .
+A bus car parked on the side of the street .
+A bowl of fruit in black and white fruits around .
+A baby sheep leaned over to eat leaves from a tree .
+A jetliner sitting on a runway near some parked cars .
+A man standing by a red double decker bus .
+An old picture of an airplane carrying a small blue sky .
+A street light with a statue of two buildings parked on the curb .
